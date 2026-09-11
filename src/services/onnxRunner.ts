@@ -223,9 +223,14 @@ export async function installOrLoadModel(
     const id = ++messageCounter;
 
     // Use a compatible ONNX model repository ID
-    const onnxModelId = modelMeta?.id.includes('-MLC')
-      ? 'onnx-community/SmolLM2-135M-Instruct-ONNX'
-      : modelId;
+    let onnxModelId = modelId;
+    if (modelId.includes('SmolLM2-135M')) {
+      onnxModelId = 'onnx-community/SmolLM2-135M-Instruct-ONNX';
+    } else if (modelId.includes('Qwen2.5-0.5B')) {
+      onnxModelId = 'onnx-community/Qwen2.5-0.5B-Instruct-ONNX';
+    } else if (modelId.includes('-MLC')) {
+      onnxModelId = 'onnx-community/SmolLM2-135M-Instruct-ONNX';
+    }
 
     const result = await new Promise<{ backend: 'webgpu' | 'wasm' | 'cpu' }>((resolve, reject) => {
       pendingRequests.set(id, { resolve, reject });

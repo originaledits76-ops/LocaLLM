@@ -17,7 +17,7 @@ interface ModelCatalogProps {
   onLaunchChat: (modelId: string) => void;
 }
 
-type FilterType = 'recommended' | 'all' | 'installed';
+type FilterType = 'recommended' | 'modest' | 'all' | 'installed';
 
 export const ModelCatalog: React.FC<ModelCatalogProps> = ({
   recommendations,
@@ -33,6 +33,14 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
   const filteredRecommendations = recommendations.filter((rec) => {
     const isInstalled = runtimeStates[rec.model.id]?.status === 'ready' || runtimeStates[rec.model.id]?.status === 'active';
     if (filter === 'installed') return isInstalled;
+    if (filter === 'modest') {
+      return (
+        rec.model.bitPrecision === '2-bit' ||
+        rec.model.bitPrecision === '3-bit' ||
+        rec.model.parameterCount === '135M' ||
+        rec.model.parameterCount === '0.5B'
+      );
+    }
     if (filter === 'recommended') return rec.level === 'perfect' || rec.level === 'comfortable';
     return true; // 'all'
   });
@@ -51,10 +59,10 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1 p-1 rounded-full liquid-glass border border-black/[0.06] w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center gap-1 p-1 rounded-full liquid-glass border border-black/[0.06] w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
           <button
             onClick={() => setFilter('recommended')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'recommended'
                 ? 'bg-black text-white shadow-xs font-semibold'
                 : 'text-zinc-600 hover:text-black'
@@ -63,8 +71,18 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
             Recommended
           </button>
           <button
+            onClick={() => setFilter('modest')}
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
+              filter === 'modest'
+                ? 'bg-amber-500 text-white shadow-xs font-semibold'
+                : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100'
+            }`}
+          >
+            ⚡ 2-Bit &amp; 3-Bit (Fast)
+          </button>
+          <button
             onClick={() => setFilter('all')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'all'
                 ? 'bg-black text-white shadow-xs font-semibold'
                 : 'text-zinc-600 hover:text-black'
@@ -74,7 +92,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
           </button>
           <button
             onClick={() => setFilter('installed')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'installed'
                 ? 'bg-black text-white shadow-xs font-semibold'
                 : 'text-zinc-600 hover:text-black'
@@ -123,10 +141,20 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                         <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                       <p className="text-xs text-zinc-500 font-mono">
                         {model.creator}
                       </p>
+                      {model.bitPrecision === '2-bit' && (
+                        <span className="px-1.5 py-0.2 text-[10px] font-bold bg-amber-100 text-amber-900 rounded border border-amber-300">
+                          ⚡ 2-Bit Ultra Fast
+                        </span>
+                      )}
+                      {model.bitPrecision === '3-bit' && (
+                        <span className="px-1.5 py-0.2 text-[10px] font-bold bg-indigo-100 text-indigo-900 rounded border border-indigo-300">
+                          ⚡ 3-Bit Speed
+                        </span>
+                      )}
                       {model.engineType === 'webllm' && (
                         <span className="px-1.5 py-0.2 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
                           WebLLM Turbo

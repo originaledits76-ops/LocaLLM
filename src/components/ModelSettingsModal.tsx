@@ -158,6 +158,36 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             />
           </div>
 
+          {/* Quantization Mode Preference */}
+          <div className="space-y-1.5 pt-1">
+            <label className="font-semibold text-black">Quantization Bit Precision</label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[
+                { id: '2bit', label: '⚡ 2-Bit', desc: 'Max Speed' },
+                { id: '3bit', label: '⚡ 3-Bit', desc: 'Balanced' },
+                { id: '4bit', label: '4-Bit', desc: 'Standard' },
+                { id: 'auto', label: 'Auto', desc: 'Default' }
+              ].map((q) => (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => setLocalSettings({ ...localSettings, quantizationPreference: q.id as any })}
+                  className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
+                    (localSettings.quantizationPreference || 'auto') === q.id
+                      ? 'bg-black text-white border-black shadow-xs font-semibold'
+                      : 'bg-zinc-50 text-zinc-700 border-black/10 hover:border-black/30'
+                  }`}
+                >
+                  <div className="text-xs font-semibold">{q.label}</div>
+                  <div className="text-[9px] opacity-75 font-mono mt-0.5">{q.desc}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-400">
+              2-Bit and 3-Bit precision options provide maximum tokens/sec throughput on modest devices.
+            </p>
+          </div>
+
           {/* System Prompt */}
           <div className="space-y-1.5">
             <label className="font-semibold text-black">System Instructions</label>

@@ -41,7 +41,8 @@ export interface ModelInfo {
   preferredBackend: 'webgpu' | 'wasm' | 'auto';
   systemPromptDefault: string;
   samplePrompts: string[];
-  dtype: 'q4' | 'q4f16' | 'q8' | 'fp32';
+  bitPrecision?: '2-bit' | '3-bit' | '4-bit' | 'fp16';
+  dtype: 'q2' | 'q3' | 'q4' | 'q4f16' | 'q0f16' | 'q8' | 'fp32';
   engineType?: EngineType;
   webLlmModelId?: string;
 }
@@ -113,5 +114,6 @@ export interface InferenceSettings {
   fastMode?: boolean;
   systemPrompt: string;
   preferWebGpu: boolean;
+  quantizationPreference?: 'auto' | '2bit' | '3bit' | '4bit';
   engine?: 'auto' | 'webllm' | 'transformers';
 }
