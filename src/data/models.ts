@@ -7,12 +7,62 @@ import { ModelInfo } from '../types';
 
 export const AVAILABLE_MODELS: ModelInfo[] = [
   {
-    id: 'SmolLM2-135M-Instruct-q4f16_1-MLC',
-    name: 'SmolLM2 135M Turbo (WebLLM)',
-    tagline: 'Ultra-fast WebLLM WebGPU engine achieving 60-120+ tokens/sec with near-zero latency.',
-    parameterCount: '135M',
+    id: 'gemma3-1b-it-q4f16_1-MLC',
+    name: 'Gemma 3 1B Turbo (WebLLM)',
+    tagline: 'Latest generation Google Gemma 3 1B model running with compiled WebGPU shaders.',
+    parameterCount: '1B',
     quantization: 'WebGPU q4f16_1 (TVM Shader)',
-    downloadSizeMB: 120,
+    downloadSizeMB: 750,
+    minRamGB: 3,
+    recommendedRamGB: 6,
+    minCores: 4,
+    contextLength: 4096,
+    license: 'Gemma Terms of Use',
+    creator: 'Google / MLC-AI',
+    recommendedTiers: ['entry', 'balanced', 'high'],
+    preferredBackend: 'webgpu',
+    dtype: 'q4f16',
+    engineType: 'webllm',
+    webLlmModelId: 'gemma3-1b-it-q4f16_1-MLC',
+    systemPromptDefault: 'You are Gemma 3, a state-of-the-art open model from Google running directly on-device in this browser via WebGPU.',
+    samplePrompts: [
+      'Summarize how attention mechanisms work in transformer models.',
+      'Write a Python function to solve the Two Sum problem with O(n) complexity.',
+      'Explain the difference between synchronous and asynchronous execution in JavaScript.'
+    ]
+  },
+  {
+    id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
+    name: 'Qwen 2.5 0.5B Turbo (WebLLM)',
+    tagline: 'High-speed reasoning and code model compiled to native WebGPU shaders for peak throughput.',
+    parameterCount: '0.5B',
+    quantization: 'WebGPU q4f16_1 (TVM Shader)',
+    downloadSizeMB: 340,
+    minRamGB: 2,
+    recommendedRamGB: 4,
+    minCores: 2,
+    contextLength: 4096,
+    license: 'Apache-2.0',
+    creator: 'Alibaba Cloud / MLC-AI',
+    recommendedTiers: ['entry', 'balanced', 'high'],
+    preferredBackend: 'webgpu',
+    dtype: 'q4f16',
+    engineType: 'webllm',
+    webLlmModelId: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
+    systemPromptDefault: 'You are Qwen 2.5, an advanced openweight language model running locally on-device in the browser with WebLLM acceleration.',
+    samplePrompts: [
+      'Write a TypeScript interface and validator for a user profile.',
+      'Summarize the core trade-offs of client-side vs server-side rendering.',
+      'Compose a haiku about running artificial intelligence offline.'
+    ]
+  },
+  {
+    id: 'SmolLM2-135M-Instruct-q0f16-MLC',
+    name: 'SmolLM2 135M Turbo (WebLLM)',
+    tagline: 'Ultra-fast lightweight model achieving 60-120+ tokens/sec with near-zero latency on WebGPU.',
+    parameterCount: '135M',
+    quantization: 'WebGPU q0f16 (TVM Shader)',
+    downloadSizeMB: 140,
     minRamGB: 2,
     recommendedRamGB: 4,
     minCores: 2,
@@ -23,37 +73,12 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     preferredBackend: 'webgpu',
     dtype: 'q4f16',
     engineType: 'webllm',
-    webLlmModelId: 'SmolLM2-135M-Instruct-q4f16_1-MLC',
+    webLlmModelId: 'SmolLM2-135M-Instruct-q0f16-MLC',
     systemPromptDefault: 'You are a concise, helpful, and friendly local AI assistant running directly in the browser via WebLLM WebGPU hardware acceleration.',
     samplePrompts: [
       'Explain how a neural network learns in 3 bullet points.',
       'Write a Python function to check if a string is a palindrome.',
       'Give me 5 creative ideas for a minimalist workspace.'
-    ]
-  },
-  {
-    id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
-    name: 'Qwen 2.5 0.5B Turbo (WebLLM)',
-    tagline: 'High-speed reasoning and code model compiled to native WebGPU shaders for peak throughput.',
-    parameterCount: '0.5B',
-    quantization: 'WebGPU q4f16_1 (TVM Shader)',
-    downloadSizeMB: 340,
-    minRamGB: 3,
-    recommendedRamGB: 6,
-    minCores: 4,
-    contextLength: 4096,
-    license: 'Apache-2.0',
-    creator: 'Alibaba Cloud / MLC-AI',
-    recommendedTiers: ['balanced', 'high'],
-    preferredBackend: 'webgpu',
-    dtype: 'q4f16',
-    engineType: 'webllm',
-    webLlmModelId: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
-    systemPromptDefault: 'You are Qwen 2.5, an advanced openweight language model running locally on-device in the browser with WebLLM acceleration.',
-    samplePrompts: [
-      'Write a TypeScript interface and validator for a user profile.',
-      'Summarize the core trade-offs of client-side vs server-side rendering.',
-      'Compose a haiku about running artificial intelligence offline.'
     ]
   },
   {
@@ -104,31 +129,6 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       'Draft a polite email asking for a status update on a project.',
       'What are the primary differences between CPU and GPU compute?',
       'Suggest 3 quick nutritious dinner recipes with 5 ingredients or fewer.'
-    ]
-  },
-  {
-    id: 'DeepSeek-R1-Distill-Qwen-1.5B-q4f16_1-MLC',
-    name: 'DeepSeek R1 Distill 1.5B Turbo (WebLLM)',
-    tagline: 'Reasoning-distilled model capable of chain-of-thought problem solving running on WebGPU.',
-    parameterCount: '1.5B',
-    quantization: 'WebGPU q4f16_1 (TVM Shader)',
-    downloadSizeMB: 920,
-    minRamGB: 6,
-    recommendedRamGB: 10,
-    minCores: 6,
-    contextLength: 4096,
-    license: 'MIT',
-    creator: 'DeepSeek / MLC-AI',
-    recommendedTiers: ['high'],
-    preferredBackend: 'webgpu',
-    dtype: 'q4f16',
-    engineType: 'webllm',
-    webLlmModelId: 'DeepSeek-R1-Distill-Qwen-1.5B-q4f16_1-MLC',
-    systemPromptDefault: 'You are a local reasoning assistant. Think through problems step by step before arriving at answers.',
-    samplePrompts: [
-      'Solve this riddle: If 3 cats catch 3 mice in 3 minutes, how many cats do you need to catch 100 mice in 100 minutes?',
-      'Explain how public-key cryptography (RSA) functions mathematically.',
-      'Refactor a nested asynchronous loop into a concurrent stream with backpressure.'
     ]
   },
   {

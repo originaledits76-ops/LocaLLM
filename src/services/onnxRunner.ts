@@ -176,28 +176,42 @@ export async function installOrLoadModel(
   try {
     // Strategy 1: Use WebLLM WebGPU engine for peak speed if WebGPU is available & requested
     if (isWebLlmTarget && webGpuAvailable && preferWebGpu) {
-      activeEngineType = 'webllm';
-      activeBackend = 'webgpu';
+      try {
+        activeEngineType = 'webllm';
+        activeBackend = 'webgpu';
 
-      await loadWebLlmModel(modelMeta?.webLlmModelId || modelId, onProgress);
-      activeModelId = modelId;
-      markModelInstalled(modelId, modelMeta?.downloadSizeMB || 150);
+        await loadWebLlmModel(modelMeta?.webLlmModelId || modelId, onProgress);
+        activeModelId = modelId;
+        markModelInstalled(modelId, modelMeta?.downloadSizeMB || 150);
 
-      onProgress?.({
-        status: 'ready',
-        file: 'WebLLM WebGPU Native Shaders ready for maximum inference speed',
-        progress: 100
-      });
+        onProgress?.({
+          status: 'ready',
+          file: 'WebLLM WebGPU Native Shaders ready for maximum inference speed',
+          progress: 100
+        });
 
-      return { success: true, backend: 'webgpu' };
+        return { success: true, backend: 'webgpu' };
+      } catch (webLlmErr: any) {
+        console.warn(
+          'WebLLM WebGPU execution failed (likely GPU buffer or workgroup storage limit on this device). Falling back to multi-core CPU WASM engine:',
+          webLlmErr
+        );
+        await unloadWebLlm();
+        onProgress?.({
+          status: 'loading',
+          stage: 'Device WebGPU limit reached (16KB workgroup buffer). Seamlessly switching to universal WASM engine...',
+          progress: 20
+        });
+        // Continue to Strategy 3 (ONNX/WASM) below
+      }
     }
 
     // Strategy 2: If WebLLM requested but WebGPU is not supported by device, fall back gracefully
     if (isWebLlmTarget && !webGpuAvailable) {
-      console.warn('WebGPU is not supported in this browser. Falling back to CPU WASM multi-threaded engine.');
+      console.warn('WebGPU is not supported or lacks 32KB compute workgroups. Falling back to CPU WASM multi-threaded engine.');
       onProgress?.({
         status: 'loading',
-        stage: 'WebGPU not detected on device. Switching to multi-core WASM CPU engine...',
+        stage: 'Device GPU limits detected. Switching to multi-core WASM CPU engine...',
         progress: 10
       });
     }

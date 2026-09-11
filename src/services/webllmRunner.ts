@@ -7,7 +7,8 @@ import {
   CreateWebWorkerMLCEngine,
   MLCEngineInterface,
   InitProgressReport,
-  ChatCompletionMessageParam
+  ChatCompletionMessageParam,
+  prebuiltAppConfig
 } from '@mlc-ai/web-llm';
 import { InferenceSettings, TelemetryPoint } from '../types';
 import { GenerationMetrics, ProgressCallbackData } from './onnxRunner';
@@ -17,7 +18,7 @@ let activeWebLlmModelId: string | null = null;
 let workerInstance: Worker | null = null;
 
 /**
- * Check if WebGPU is available in the current browser environment
+ * Check if WebGPU is available and meets the 32KB workgroup storage required by WebLLM shaders
  */
 export async function isWebGpuSupported(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !(navigator as any).gpu) {
@@ -27,9 +28,39 @@ export async function isWebGpuSupported(): Promise<boolean> {
     const adapter = await (navigator as any).gpu.requestAdapter({
       powerPreference: 'high-performance'
     });
-    return !!adapter;
+    if (!adapter) return false;
+    
+    // Check if the GPU supports the minimum 32KB workgroup storage size required by TVM / MLC shaders
+    const workgroupLimit = adapter.limits?.maxComputeWorkgroupStorageSize || 0;
+    if (workgroupLimit > 0 && workgroupLimit < 32768) {
+      console.warn(
+        `WebGPU adapter detected (${adapter.info?.vendor || 'mobile GPU'}) but maxComputeWorkgroupStorageSize is ${workgroupLimit} bytes (32768 required for WebLLM shaders). Falling back to WASM engine.`
+      );
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Unloads active WebLLM engine and frees worker memory
+ */
+export async function unloadWebLlm(): Promise<void> {
+  if (webLlmEngine) {
+    try {
+      await webLlmEngine.unload();
+    } catch {}
+    webLlmEngine = null;
+    activeWebLlmModelId = null;
+  }
+  if (workerInstance) {
+    try {
+      workerInstance.terminate();
+    } catch {}
+    workerInstance = null;
   }
 }
 
@@ -93,6 +124,7 @@ export async function loadWebLlmModel(
       workerInstance,
       modelId,
       {
+        appConfig: prebuiltAppConfig,
         initProgressCallback: progressCallback,
         logLevel: 'WARN'
       }
@@ -250,25 +282,6 @@ export async function runWebLlmInference(
     text: fullAccumulatedText,
     metrics: finalMetrics
   };
-}
-
-/**
- * Unloads active WebLLM model and frees WebGPU memory
- */
-export async function unloadWebLlm(): Promise<void> {
-  if (webLlmEngine) {
-    try {
-      await webLlmEngine.unload();
-    } catch {}
-    webLlmEngine = null;
-    activeWebLlmModelId = null;
-  }
-  if (workerInstance) {
-    try {
-      workerInstance.terminate();
-    } catch {}
-    workerInstance = null;
-  }
 }
 
 export function getActiveWebLlmModelId(): string | null {
