@@ -183,18 +183,27 @@ export async function runWebLlmInference(
     });
   }
 
-  for (const m of messages) {
-    chatMessages.push({
-      role: m.role,
-      content: m.content
-    });
+  // Retain full conversation context with sliding window if long
+  const maxTurns = 24;
+  const contextMessages = messages.length > maxTurns
+    ? [...messages.slice(0, 2), ...messages.slice(-(maxTurns - 2))]
+    : messages;
+
+  for (const m of contextMessages) {
+    if (m.role !== 'system' && m.content?.trim()) {
+      chatMessages.push({
+        role: m.role,
+        content: m.content
+      });
+    }
   }
 
   const completion = await webLlmEngine.chat.completions.create({
     messages: chatMessages,
-    temperature: settings.fastMode ? 0.05 : Math.max(0.1, Math.min(settings.temperature, 1.2)),
-    top_p: settings.topP || 0.9,
-    max_tokens: settings.maxTokens || 512,
+    temperature: settings.fastMode ? 0.0 : Math.max(0.1, Math.min(settings.temperature, 1.2)),
+    top_p: settings.fastMode ? 1.0 : (settings.topP || 0.9),
+    max_tokens: settings.maxTokens && settings.maxTokens > 0 ? settings.maxTokens : 2048,
+    repetition_penalty: 1.0,
     stream: true
   });
 

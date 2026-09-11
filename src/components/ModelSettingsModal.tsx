@@ -33,7 +33,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   const handleReset = () => {
     setLocalSettings({
       temperature: 0.7,
-      maxTokens: 256,
+      maxTokens: 2048,
       topP: 0.9,
       topK: 40,
       fastMode: true,
@@ -100,24 +100,40 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           {/* Max Tokens */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="font-semibold text-black">Max Tokens</label>
-              <span className="font-mono text-zinc-500 font-medium">
-                {localSettings.maxTokens}
+              <label className="font-semibold text-black">Max Tokens (Response Length)</label>
+              <span className="font-mono text-zinc-700 font-semibold bg-zinc-100 px-2 py-0.5 rounded">
+                {localSettings.maxTokens} tokens
               </span>
             </div>
             <input
               type="range"
-              min={64}
-              max={1024}
-              step={32}
+              min={128}
+              max={4096}
+              step={64}
               value={localSettings.maxTokens}
               onChange={(e) =>
                 setLocalSettings({ ...localSettings, maxTokens: parseInt(e.target.value, 10) })
               }
               className="w-full accent-black cursor-pointer h-2"
             />
+            <div className="flex items-center justify-between gap-1 pt-1">
+              {[512, 1024, 2048, 4096].map((tok) => (
+                <button
+                  key={tok}
+                  type="button"
+                  onClick={() => setLocalSettings({ ...localSettings, maxTokens: tok })}
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all ${
+                    localSettings.maxTokens === tok
+                      ? 'bg-black text-white border-black font-semibold'
+                      : 'bg-zinc-50 text-zinc-600 border-black/10 hover:border-black/30'
+                  }`}
+                >
+                  {tok}
+                </button>
+              ))}
+            </div>
             <p className="text-[10px] text-zinc-400">
-              Upper bound for response length. Lower values generate faster.
+              Allows deep, unconstrained long-form generations up to 4096 tokens.
             </p>
           </div>
 

@@ -245,6 +245,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
           {/* Right Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Conversation Context Indicator */}
+            {messages.length > 0 && (
+              <div 
+                className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-100 border border-black/5 text-[11px] font-mono text-zinc-600"
+                title={`${messages.length} conversational turns active in model memory context`}
+              >
+                <Layers className="w-3 h-3 text-zinc-500" />
+                <span>{messages.length} turns in context</span>
+              </div>
+            )}
+
             {/* Visual Performance Monitor Button */}
             <button
               id="toggle-telemetry-button"

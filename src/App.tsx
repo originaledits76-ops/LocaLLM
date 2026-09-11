@@ -71,7 +71,7 @@ export default function App() {
   // Settings State
   const [settings, setSettings] = useState<InferenceSettings>({
     temperature: 0.6,
-    maxTokens: 256,
+    maxTokens: 2048,
     topP: 0.9,
     topK: 40,
     fastMode: true,

@@ -10,12 +10,13 @@ env.allowLocalModels = false;
 env.useBrowserCache = true;
 
 // Safe ONNX Runtime Web configuration:
-// Enable multi-threading when crossOriginIsolated headers are active, plus SIMD acceleration.
+// Enable multi-threading & SIMD acceleration
 const isIsolated = typeof self !== 'undefined' && Boolean((self as any).crossOriginIsolated);
 const availableCores = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 4) : 4;
 
 if (env.backends?.onnx?.wasm) {
-  env.backends.onnx.wasm.numThreads = isIsolated ? Math.min(8, Math.max(2, availableCores - 1)) : 1;
+  // Use optimal thread count (between 2 and 8)
+  env.backends.onnx.wasm.numThreads = Math.min(8, Math.max(2, isIsolated ? availableCores : Math.min(availableCores, 4)));
   env.backends.onnx.wasm.proxy = false;
   env.backends.onnx.wasm.simd = true;
 }
@@ -54,7 +55,6 @@ function formatPrompt(
   modelId: string,
   systemPrompt?: string
 ): string {
-  // Construct messages with system prompt at top if present
   const fullMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
 
   if (systemPrompt && systemPrompt.trim()) {
@@ -64,8 +64,14 @@ function formatPrompt(
     });
   }
 
-  for (const m of messages) {
-    if (m.role !== 'system') {
+  // Preserve multi-turn conversation context history up to 24 turns
+  const maxTurns = 24;
+  const recentMessages = messages.length > maxTurns 
+    ? [...messages.slice(0, 2), ...messages.slice(- (maxTurns - 2))]
+    : messages;
+
+  for (const m of recentMessages) {
+    if (m.role !== 'system' && m.content.trim()) {
       fullMessages.push({
         role: m.role,
         content: m.content.trim()
@@ -102,7 +108,18 @@ function formatPrompt(
     return prompt;
   }
 
-  // Standard ChatML format (SmolLM2, Qwen2.5, DeepSeek)
+  if (lowerId.includes('gemma')) {
+    // Gemma format
+    let prompt = '';
+    for (const m of fullMessages) {
+      const role = m.role === 'assistant' ? 'model' : m.role === 'system' ? 'user' : m.role;
+      prompt += `<start_of_turn>${role}\n${m.content}<end_of_turn>\n`;
+    }
+    prompt += '<start_of_turn>model\n';
+    return prompt;
+  }
+
+  // Standard ChatML format (SmolLM2, Qwen2.5, DeepSeek, etc.)
   let prompt = '';
   for (const m of fullMessages) {
     prompt += `<|im_start|>${m.role}\n${m.content}<|im_end|>\n`;
@@ -487,13 +504,13 @@ self.onmessage = async (event: MessageEvent) => {
         const temperature = typeof settings?.temperature === 'number' ? settings.temperature : 0.6;
         const topP = typeof settings?.topP === 'number' ? settings.topP : 0.9;
         const topK = typeof settings?.topK === 'number' ? settings.topK : 40;
-        const maxNewTokens = typeof settings?.maxTokens === 'number' ? settings.maxTokens : 256;
+        const maxNewTokens = typeof settings?.maxTokens === 'number' && settings.maxTokens > 0 ? settings.maxTokens : 2048;
 
         // Optimized decoding configuration:
         // 1. use_cache: true leverages past_key_values tensor caching for O(1) step computation
         // 2. num_beams: 1 prevents multi-beam duplication overhead
         // 3. do_sample: false when temperature <= 0.1 or in fast greedy mode for 3-5x faster decoding
-        const doSample = temperature > 0.15 && !isFastMode;
+        const doSample = !isFastMode && temperature > 0.15;
 
         const generationOptions: any = {
           max_new_tokens: maxNewTokens,
@@ -505,9 +522,9 @@ self.onmessage = async (event: MessageEvent) => {
 
         if (doSample) {
           generationOptions.do_sample = true;
-          generationOptions.temperature = Math.max(0.1, Math.min(temperature, 1.0));
+          generationOptions.temperature = Math.max(0.1, Math.min(temperature, 1.2));
           generationOptions.top_p = topP;
-          generationOptions.top_k = Math.min(topK, 25);
+          generationOptions.top_k = Math.min(topK, 40);
         } else {
           generationOptions.do_sample = false;
         }
