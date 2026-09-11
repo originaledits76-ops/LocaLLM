@@ -32,9 +32,7 @@ const STOP_SEQUENCES = [
   '<|eot_id|>',
   '<|end_of_text|>',
   '</s>',
-  '<end_of_turn>',
-  '<|im_start|>',
-  '<|start_header_id|>'
+  '<end_of_turn>'
 ];
 
 function cleanStopSequences(text: string): { cleaned: string; hasStop: boolean } {
