@@ -132,6 +132,31 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     ]
   },
   {
+    id: 'gemma-2-2b-it-q4f16_1-MLC',
+    name: 'Gemma 2 2B Turbo (WebLLM)',
+    tagline: 'Google Gemma 2 architecture with WebGPU shaders for mobile & desktop local inference.',
+    parameterCount: '2B',
+    quantization: 'WebGPU q4f16_1 (TVM Shader)',
+    downloadSizeMB: 1350,
+    minRamGB: 4,
+    recommendedRamGB: 8,
+    minCores: 4,
+    contextLength: 4096,
+    license: 'Gemma Terms of Use',
+    creator: 'Google / MLC-AI',
+    recommendedTiers: ['balanced', 'high'],
+    preferredBackend: 'webgpu',
+    dtype: 'q4f16',
+    engineType: 'webllm',
+    webLlmModelId: 'gemma-2-2b-it-q4f16_1-MLC',
+    systemPromptDefault: 'You are Gemma 2, an open-weights model developed by Google, executing locally inside this web browser via WebGPU.',
+    samplePrompts: [
+      'Compare the architectures of Transformer attention vs linear attention.',
+      'Write a function in Python that implements binary search recursively.',
+      'Explain the concept of quantum superposition in simple terms.'
+    ]
+  },
+  {
     id: 'onnx-community/SmolLM2-135M-Instruct-ONNX',
     name: 'SmolLM2 135M (CPU WASM / ONNX)',
     tagline: 'Universal multi-threaded CPU WASM engine fallback for devices without WebGPU hardware.',

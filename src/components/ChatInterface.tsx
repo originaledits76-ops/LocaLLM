@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { ChatMessage, InferenceSettings, ModelInfo, TelemetryPoint } from '../types';
 import { PerformanceMonitor } from './PerformanceMonitor';
+import { FormattedMessage } from './FormattedMessage';
+import { HardwareOptimizationBanner } from './HardwareOptimizationBanner';
 
 interface ChatInterfaceProps {
   activeModel: ModelInfo | null;
@@ -289,6 +291,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </header>
 
+      {/* Hardware Optimization Status Banner */}
+      <HardwareOptimizationBanner />
+
       {/* Visual Performance Monitor HUD */}
       {showTelemetry && (
         <div className="shrink-0 max-w-4xl w-full mx-auto px-3 sm:px-6 pt-2 pb-1 transition-all">
@@ -385,8 +390,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       : 'liquid-glass-card text-black rounded-bl-xs shadow-xs'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap break-words pr-6">
-                    {msg.content}
+                  <div className="pr-6">
+                    <FormattedMessage content={msg.content} isUser={msg.role === 'user'} />
                   </div>
 
                   {/* Copy Button */}
@@ -441,8 +446,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {isGenerating && (
               <div className="flex gap-2 max-w-[90%] sm:max-w-2xl mr-auto justify-start">
                 <div className="relative rounded-3xl rounded-bl-xs px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm leading-relaxed liquid-glass-card text-black shadow-xs">
-                  <div className="whitespace-pre-wrap break-words">
-                    {streamingContent || (
+                  <div>
+                    {streamingContent ? (
+                      <FormattedMessage content={streamingContent} isUser={false} />
+                    ) : (
                       <span className="text-zinc-400 italic font-mono text-xs">Generating locally...</span>
                     )}
                     <span className="inline-block w-1.5 h-3.5 ml-1 bg-black animate-pulse align-middle" />

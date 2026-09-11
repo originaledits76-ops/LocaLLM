@@ -24,7 +24,9 @@ export async function isWebGpuSupported(): Promise<boolean> {
     return false;
   }
   try {
-    const adapter = await (navigator as any).gpu.requestAdapter();
+    const adapter = await (navigator as any).gpu.requestAdapter({
+      powerPreference: 'high-performance'
+    });
     return !!adapter;
   } catch {
     return false;
