@@ -162,7 +162,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
             <p className="text-[10px] font-mono text-zinc-500 truncate">
               {activeModelName ? `${activeModelName} • ` : ''}
-              Engine: <span className="uppercase font-semibold text-black">{backendUsed}</span>
+              Mode: <span className="uppercase font-semibold text-black">{backendUsed === 'webgpu' ? 'GPU Hardware' : 'CPU Core'}</span>
             </p>
           </div>
         </div>
@@ -595,7 +595,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
             {calculatedSpikes > 0 ? (
               <span className="text-amber-700 font-medium">
-                {calculatedSpikes} {calculatedSpikes === 1 ? 'delay spike' : 'delay spikes'} observed (e.g., KV cache expansion or browser GC)
+                {calculatedSpikes} {calculatedSpikes === 1 ? 'delay spike' : 'delay spikes'} observed (e.g., memory sync or context expansion)
               </span>
             ) : (
               <span className="text-zinc-500">

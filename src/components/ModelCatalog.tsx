@@ -47,55 +47,55 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header & Filter Pills */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Filter Bar Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 brutalist-card p-3.5 sm:p-4">
         <div>
-          <h2 className="text-base font-semibold tracking-tight text-black">
-            Available Models
+          <h2 className="text-base font-black tracking-tight text-black font-display uppercase">
+            Model Selection Hub
           </h2>
-          <p className="text-xs text-zinc-500">
-            Select an openweight model to run locally on your device
+          <p className="text-xs text-zinc-600 font-medium">
+            Open-weight models optimized for private on-device WebGPU / WASM execution
           </p>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1 p-1 rounded-full liquid-glass border border-black/[0.06] w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/60 backdrop-blur-md border-2 border-black w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
           <button
             onClick={() => setFilter('recommended')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
               filter === 'recommended'
-                ? 'bg-black text-white shadow-xs font-semibold'
-                : 'text-zinc-600 hover:text-black'
+                ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
+                : 'text-black border-transparent hover:bg-black/5'
             }`}
           >
             Recommended
           </button>
           <button
             onClick={() => setFilter('modest')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
               filter === 'modest'
-                ? 'bg-amber-500 text-white shadow-xs font-semibold'
-                : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100'
+                ? 'bg-amber-400 text-black border-black shadow-[2px_2px_0px_#000]'
+                : 'text-amber-900 border-transparent hover:bg-amber-100/50'
             }`}
           >
-            ⚡ 2-Bit &amp; 3-Bit (Fast)
+            ⚡ Fast 2 &amp; 3-Bit
           </button>
           <button
             onClick={() => setFilter('all')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
               filter === 'all'
-                ? 'bg-black text-white shadow-xs font-semibold'
-                : 'text-zinc-600 hover:text-black'
+                ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
+                : 'text-black border-transparent hover:bg-black/5'
             }`}
           >
-            All
+            All Models
           </button>
           <button
             onClick={() => setFilter('installed')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 sm:py-1 text-xs font-medium rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
+            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
               filter === 'installed'
-                ? 'bg-black text-white shadow-xs font-semibold'
-                : 'text-zinc-600 hover:text-black'
+                ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
+                : 'text-black border-transparent hover:bg-black/5'
             }`}
           >
             Installed
@@ -123,10 +123,10 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
             <div
               key={model.id}
               id={`model-card-${model.id.replace(/[^a-zA-Z0-9]/g, '-')}`}
-              className={`liquid-glass-card rounded-3xl p-5 flex flex-col justify-between transition-all ${
+              className={`brutalist-card-interactive p-5 flex flex-col justify-between ${
                 isActive
-                  ? 'border-black ring-1 ring-black'
-                  : 'hover:border-black/30'
+                  ? 'bg-emerald-100/70 border-2 border-black shadow-[6px_6px_0px_#000]'
+                  : ''
               }`}
             >
               <div>
@@ -157,7 +157,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                       )}
                       {model.engineType === 'webllm' && (
                         <span className="px-1.5 py-0.2 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
-                          WebLLM Turbo
+                          ⚡ GPU Accelerated
                         </span>
                       )}
                     </div>
@@ -246,7 +246,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5 text-xs font-medium text-black">
                       <Check className="w-3.5 h-3.5" />
-                      <span>Ready in Cache</span>
+                      <span>Ready</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -254,8 +254,8 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                         id={`uninstall-btn-${model.id}`}
                         onClick={() => onUninstall(model.id)}
                         className="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center rounded-full border border-black/10 hover:border-black text-zinc-400 hover:text-black transition-colors shrink-0"
-                        title="Delete from cache"
-                        aria-label="Delete model from cache"
+                        title="Delete model"
+                        aria-label="Delete model"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

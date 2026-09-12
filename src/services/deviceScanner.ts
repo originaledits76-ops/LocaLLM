@@ -86,16 +86,35 @@ export async function scanDeviceHardware(customRamGB?: number): Promise<DeviceSp
   let webGpuAdapterName: string | null = null;
 
   try {
-    if (nav.gpu && typeof nav.gpu.requestAdapter === 'function') {
-      const adapter = await nav.gpu.requestAdapter();
+    if (nav.gpu && typeof (nav.gpu as any).requestAdapter === 'function') {
+      let adapter = null;
+      try {
+        adapter = await (nav.gpu as any).requestAdapter({ powerPreference: 'high-performance' });
+      } catch {
+        adapter = null;
+      }
+      if (!adapter) {
+        try {
+          adapter = await (nav.gpu as any).requestAdapter();
+        } catch {
+          adapter = null;
+        }
+      }
+      if (!adapter) {
+        try {
+          adapter = await (nav.gpu as any).requestAdapter({ powerPreference: 'low-power' });
+        } catch {
+          adapter = null;
+        }
+      }
+
       if (adapter) {
         webGpuAvailable = true;
-        // In modern browsers, adapter.info holds device description
         const info = (adapter as unknown as { info?: { architecture?: string; description?: string; vendor?: string } }).info;
         if (info && (info.description || info.architecture || info.vendor)) {
-          webGpuAdapterName = [info.vendor, info.architecture, info.description].filter(Boolean).join(' ') || 'WebGPU Hardware Accelerated';
+          webGpuAdapterName = [info.vendor, info.architecture, info.description].filter(Boolean).join(' ') || 'Hardware GPU Accelerator';
         } else {
-          webGpuAdapterName = 'WebGPU Native Accelerator';
+          webGpuAdapterName = 'Hardware GPU Accelerator';
         }
       }
     }

@@ -186,32 +186,31 @@ export async function installOrLoadModel(
 
         onProgress?.({
           status: 'ready',
-          file: 'WebLLM WebGPU Native Shaders ready for maximum inference speed',
+          file: 'Model ready for high-speed local inference',
           progress: 100
         });
 
         return { success: true, backend: 'webgpu' };
       } catch (webLlmErr: any) {
         console.warn(
-          'WebLLM WebGPU execution failed (likely GPU buffer or workgroup storage limit on this device). Falling back to multi-core CPU WASM engine:',
+          'Hardware accelerated GPU execution failed. Falling back to multi-core CPU engine:',
           webLlmErr
         );
         await unloadWebLlm();
         onProgress?.({
           status: 'loading',
-          stage: 'Device WebGPU limit reached (16KB workgroup buffer). Seamlessly switching to universal WASM engine...',
+          stage: 'Switching to CPU engine...',
           progress: 20
         });
-        // Continue to Strategy 3 (ONNX/WASM) below
+        // Continue to Strategy 3 (Standard CPU) below
       }
     }
 
-    // Strategy 2: If WebLLM requested but WebGPU is not supported by device, fall back gracefully
+    // Strategy 2: If hardware acceleration requested but not supported by device, fall back gracefully
     if (isWebLlmTarget && !webGpuAvailable) {
-      console.warn('WebGPU is not supported or lacks 32KB compute workgroups. Falling back to CPU WASM multi-threaded engine.');
       onProgress?.({
         status: 'loading',
-        stage: 'Device GPU limits detected. Switching to multi-core WASM CPU engine...',
+        stage: 'Switching to multi-core CPU engine...',
         progress: 10
       });
     }

@@ -176,30 +176,35 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full relative overflow-hidden">
-      {/* Top Floating Glass Header */}
-      <header className="shrink-0 sticky top-0 z-30 liquid-glass border-b border-black/[0.06] px-3 sm:px-6 py-2 sm:py-2.5">
+    <div className="flex flex-col h-full w-full relative overflow-hidden brutalist-bg">
+      {/* Top Neubrutalist Sub-Header for Chat */}
+      <header className="shrink-0 z-30 brutalist-header px-3 sm:px-6 py-2 sm:py-2.5">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-          {/* Model Switcher */}
+          {/* Model Switcher Dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowModelDropdown(!showModelDropdown)}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-full border border-black/10 hover:border-black text-xs font-semibold text-black bg-white/70 hover:bg-white transition-all shadow-xs min-h-[40px]"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border-2 border-black font-bold text-xs text-black bg-white hover:bg-amber-100 transition-all shadow-[2px_2px_0px_0px_#000] min-h-[38px]"
             >
-              <div className="w-2 h-2 rounded-full bg-black animate-pulse shrink-0" />
-              <span className="truncate max-w-[120px] xs:max-w-[170px] sm:max-w-[220px]">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-black animate-pulse shrink-0" />
+              <span className="truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px] font-mono font-bold">
                 {activeModel ? activeModel.name : 'Select Model'}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              {activeModel && (
+                <span className="hidden xs:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-black text-white">
+                  {activeModel.parameterCount}
+                </span>
+              )}
+              <ChevronDown className="w-4 h-4 text-black shrink-0 ml-0.5" />
             </button>
 
             {showModelDropdown && (
-              <div className="absolute top-full left-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 rounded-2xl liquid-glass-dock p-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1 text-[10px] font-mono text-zinc-400 uppercase">
-                  Installed Models
+              <div className="absolute top-full left-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 rounded-xl brutalist-card p-2 shadow-[6px_6px_0px_0px_#000] z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider">
+                  Installed Local Models
                 </div>
                 {installedModels.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-zinc-500 text-center">
+                  <div className="px-3 py-3 text-xs text-zinc-600 text-center font-medium">
                     No models installed yet.
                     {onNavigateToModels && (
                       <button
@@ -207,9 +212,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           setShowModelDropdown(false);
                           onNavigateToModels();
                         }}
-                        className="block mt-2 mx-auto px-3 py-1.5 rounded-full bg-black text-white text-xs font-medium min-h-[36px]"
+                        className="block mt-2.5 mx-auto px-4 py-2 rounded-xl bg-black text-white text-xs font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:bg-zinc-800 transition-colors"
                       >
-                        Explore Models
+                        Explore Models Catalog
                       </button>
                     )}
                   </div>
@@ -221,20 +226,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         onSwitchModel(m.id);
                         setShowModelDropdown(false);
                       }}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors min-h-[44px] ${
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition-colors min-h-[40px] border my-1 ${
                         activeModel?.id === m.id
-                          ? 'bg-black text-white font-medium'
-                          : 'text-black hover:bg-black/5'
+                          ? 'bg-black text-white font-bold border-black'
+                          : 'text-black bg-white hover:bg-zinc-100 border-zinc-200'
                       }`}
                     >
                       <div className="truncate pr-2">
-                        <p className="font-semibold truncate">{m.name}</p>
+                        <p className="font-bold truncate">{m.name}</p>
                         <p className={`text-[10px] font-mono ${activeModel?.id === m.id ? 'text-zinc-300' : 'text-zinc-500'}`}>
                           {m.parameterCount} • {m.quantization}
                         </p>
                       </div>
                       {activeModel?.id === m.id && (
-                        <Check className="w-3.5 h-3.5 shrink-0" />
+                        <Check className="w-4 h-4 shrink-0 text-emerald-400" />
                       )}
                     </button>
                   ))
@@ -243,38 +248,36 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             )}
           </div>
 
-          {/* Right Actions */}
+          {/* Right Action Bar */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Conversation Context Indicator */}
             {messages.length > 0 && (
               <div 
-                className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-100 border border-black/5 text-[11px] font-mono text-zinc-600"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border-2 border-black text-[11px] font-mono font-bold text-black shadow-[2px_2px_0px_0px_#000]"
                 title={`${messages.length} conversational turns active in model memory context`}
               >
-                <Layers className="w-3 h-3 text-zinc-500" />
-                <span>{messages.length} turns in context</span>
+                <Layers className="w-3.5 h-3.5 text-black" />
+                <span>{messages.length} turns</span>
               </div>
             )}
 
-            {/* Visual Performance Monitor Button */}
             <button
               id="toggle-telemetry-button"
               type="button"
               onClick={() => setShowTelemetry(!showTelemetry)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-all shadow-xs min-h-[36px] ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-black text-xs font-mono font-bold transition-all shadow-[2px_2px_0px_0px_#000] min-h-[36px] ${
                 showTelemetry
-                  ? 'bg-black text-white border-black shadow-xs'
-                  : 'bg-white/70 hover:bg-white text-zinc-700 hover:text-black border-black/10'
+                  ? 'bg-amber-300 text-black'
+                  : 'bg-white hover:bg-zinc-100 text-black'
               }`}
-              title="Toggle Performance Telemetry & Latency Spikes Monitor"
+              title="Toggle Performance Telemetry HUD"
               aria-label="Toggle Performance Telemetry"
             >
-              <Activity className={`w-3.5 h-3.5 ${isGenerating ? 'animate-pulse text-emerald-400' : ''}`} />
+              <Activity className={`w-3.5 h-3.5 ${isGenerating ? 'animate-pulse text-emerald-600' : ''}`} />
               <span className="hidden xs:inline">Telemetry</span>
               {streamingMetrics.tokensPerSec !== undefined && streamingMetrics.tokensPerSec > 0 ? (
-                <span className="font-semibold">{streamingMetrics.tokensPerSec.toFixed(1)} t/s</span>
+                <span className="font-bold text-emerald-700 bg-white px-1.5 rounded border border-black">{streamingMetrics.tokensPerSec.toFixed(1)} t/s</span>
               ) : activeAvgTps > 0 ? (
-                <span className="text-[11px] opacity-80">{activeAvgTps.toFixed(1)} t/s</span>
+                <span className="text-[11px] opacity-90">{activeAvgTps.toFixed(1)} t/s</span>
               ) : null}
             </button>
 
@@ -282,7 +285,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               id="clear-chat-button"
               onClick={onClearChat}
               disabled={messages.length === 0 && !streamingContent}
-              className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-full border border-black/10 hover:border-black text-zinc-400 hover:text-black disabled:opacity-30 bg-white/60 transition-colors shadow-xs shrink-0"
+              className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl border-2 border-black text-black bg-white hover:bg-rose-100 disabled:opacity-40 transition-colors shadow-[2px_2px_0px_0px_#000] shrink-0"
               title="Clear conversation"
               aria-label="Clear conversation"
             >
@@ -292,7 +295,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <button
               id="open-settings-button"
               onClick={onOpenSettings}
-              className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-full border border-black/10 hover:border-black text-black bg-white/60 transition-colors shadow-xs shrink-0"
+              className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl border-2 border-black text-black bg-white hover:bg-zinc-100 transition-colors shadow-[2px_2px_0px_0px_#000] shrink-0"
               title="Inference Settings"
               aria-label="Inference Settings"
             >
@@ -309,14 +312,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {showTelemetry && (
         <div className="shrink-0 max-w-4xl w-full mx-auto px-3 sm:px-6 pt-2 pb-1 transition-all">
           {inspectedMessage && (
-            <div className="mb-1.5 px-3 py-1 rounded-xl bg-black/5 flex items-center justify-between text-[11px] font-mono border border-black/5">
-              <span className="text-zinc-600 truncate mr-2">
-                Inspecting snapshot for response from {new Date(inspectedMessage.timestamp).toLocaleTimeString()}
+            <div className="mb-1.5 px-3 py-1.5 rounded-xl bg-amber-200 border-2 border-black flex items-center justify-between text-[11px] font-mono shadow-[2px_2px_0px_0px_#000]">
+              <span className="text-black font-bold truncate mr-2">
+                Inspecting snapshot from {new Date(inspectedMessage.timestamp).toLocaleTimeString()}
               </span>
               <button
                 type="button"
                 onClick={() => setInspectedMessageId(null)}
-                className="text-black font-semibold hover:underline shrink-0 text-[11px]"
+                className="text-black font-extrabold hover:underline shrink-0 text-[11px]"
               >
                 &larr; Return to Live Stream
               </button>
@@ -343,44 +346,60 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 space-y-3.5 max-w-3xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-4 max-w-3xl mx-auto w-full">
         {messages.length === 0 && !streamingContent ? (
           /* Empty / Welcome State */
-          <div className="min-h-[45vh] flex flex-col items-center justify-center text-center max-w-md mx-auto py-8 px-2">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-black text-white flex items-center justify-center mb-3 shadow-md">
-              <Sparkles className="w-5 h-5" />
+          <div className="min-h-[50vh] flex flex-col items-center justify-center text-center max-w-xl mx-auto py-8 px-2">
+            <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-4 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
+              <Sparkles className="w-7 h-7 text-amber-300" />
             </div>
 
-            <h3 className="text-lg sm:text-xl font-bold text-black tracking-tight">
-              {activeModel ? activeModel.name : 'Local AI'}
+            <h3 className="text-2xl sm:text-3xl font-black font-display text-black tracking-tight uppercase">
+              {activeModel ? activeModel.name : 'Pocket Local AI'}
             </h3>
 
-            <p className="text-xs text-zinc-500 mt-1 max-w-xs leading-relaxed">
-              100% on-device inference via ONNX Runtime Web.
-            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-3 mb-6 text-xs font-mono font-bold">
+              <span className="px-3 py-1 rounded-xl bg-emerald-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-black" />
+                100% On-Device Private
+              </span>
+              <span className="px-3 py-1 rounded-xl bg-amber-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-black" />
+                Zero Latency
+              </span>
+            </div>
 
-            {/* Quick Starters */}
+            {/* Starter Prompt Cards */}
             {activeModel && activeModel.samplePrompts.length > 0 ? (
-              <div className="mt-5 sm:mt-6 w-full space-y-2">
-                {activeModel.samplePrompts.slice(0, 3).map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => onSendMessage(prompt)}
-                    className="w-full text-left px-3.5 sm:px-4 py-2.5 rounded-2xl liquid-glass-card hover:border-black/30 text-xs text-zinc-800 hover:text-black transition-all flex items-center justify-between group min-h-[44px]"
-                  >
-                    <span className="truncate pr-2">"{prompt}"</span>
-                    <Sparkles className="w-3 h-3 text-zinc-400 group-hover:text-black shrink-0 transition-colors" />
-                  </button>
-                ))}
+              <div className="w-full space-y-3 text-left">
+                <p className="text-xs font-bold text-zinc-600 uppercase tracking-wider px-1 font-mono">
+                  Prompt Ideas
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activeModel.samplePrompts.slice(0, 4).map((prompt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => onSendMessage(prompt)}
+                      className="text-left p-4 rounded-xl brutalist-card-interactive group flex flex-col justify-between min-h-[80px]"
+                    >
+                      <span className="text-xs font-bold text-black leading-snug">
+                        "{prompt}"
+                      </span>
+                      <span className="mt-3 text-[10px] font-mono font-bold text-zinc-500 group-hover:text-black flex items-center gap-1">
+                        Send Prompt &rarr;
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : !activeModel ? (
-              <div className="mt-5">
+              <div className="mt-4">
                 <button
                   onClick={onNavigateToModels}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-black text-white text-xs font-semibold hover:bg-zinc-800 transition-all shadow-xs min-h-[44px]"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white text-xs font-bold border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:bg-zinc-800 transition-all min-h-[44px]"
                 >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Choose a Model to Download</span>
+                  <Layers className="w-4 h-4 text-amber-300" />
+                  <span>Explore & Download Models</span>
                 </button>
               </div>
             ) : null}
@@ -390,15 +409,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-2 max-w-[90%] sm:max-w-2xl ${
+                className={`flex gap-2 max-w-[92%] sm:max-w-2xl ${
                   msg.role === 'user' ? 'ml-auto justify-end' : 'mr-auto justify-start'
                 }`}
               >
                 <div
-                  className={`relative group rounded-3xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm leading-relaxed ${
+                  className={`relative group rounded-2xl p-4 text-sm leading-relaxed border-2 border-black shadow-[4px_4px_0px_0px_#000] backdrop-blur-md ${
                     msg.role === 'user'
-                      ? 'bg-black text-white rounded-br-xs shadow-sm'
-                      : 'liquid-glass-card text-black rounded-bl-xs shadow-xs'
+                      ? 'bg-black/90 text-white font-medium'
+                      : 'bg-white/85 text-black font-medium'
                   }`}
                 >
                   <div className="pr-6">
@@ -408,20 +427,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   {/* Copy Button */}
                   <button
                     onClick={() => handleCopy(msg.content, msg.id)}
-                    className={`absolute top-2 right-2 p-1.5 rounded-md opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity min-w-[28px] min-h-[28px] flex items-center justify-center ${
-                      msg.role === 'user' ? 'text-zinc-400 hover:text-white' : 'text-zinc-400 hover:text-black'
+                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-lg opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity min-w-[28px] min-h-[28px] flex items-center justify-center border ${
+                      msg.role === 'user' ? 'text-zinc-300 hover:text-white bg-zinc-800 border-zinc-700' : 'text-zinc-600 hover:text-black bg-zinc-100 border-black'
                     }`}
-                    title="Copy"
+                    title="Copy message"
                     aria-label="Copy message"
                   >
                     {copiedId === msg.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
                   </button>
 
-                  {/* Metrics Footnote with Telemetry Inspector */}
+                  {/* Metrics Footnote */}
                   {msg.role === 'assistant' && msg.metrics && (
                     <button
                       type="button"
@@ -430,23 +449,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         setShowTelemetry(true);
                         setIsTelemetryExpanded(true);
                       }}
-                      className="mt-2 pt-1.5 border-t border-black/[0.05] flex items-center gap-1.5 sm:gap-2 text-[10px] font-mono text-zinc-500 hover:text-black transition-colors w-full text-left group cursor-pointer"
-                      title="Click to inspect tokens-per-second chart and latency spikes for this message"
+                      className="mt-3 pt-2 border-t border-black/10 flex flex-wrap items-center gap-2 text-[10px] font-mono font-bold text-zinc-600 hover:text-black transition-colors w-full text-left group cursor-pointer"
+                      title="Inspect performance telemetry for this message"
                     >
-                      <Activity className="w-3 h-3 text-zinc-400 group-hover:text-black shrink-0" />
-                      <span>{msg.metrics.tokensPerSec ? `${msg.metrics.tokensPerSec.toFixed(1)} tok/s` : 'Metrics'}</span>
+                      <span className="flex items-center gap-1 font-bold text-emerald-900 bg-emerald-300 px-2 py-0.5 rounded border border-black">
+                        <Activity className="w-3 h-3 text-emerald-900" />
+                        {msg.metrics.tokensPerSec ? `${msg.metrics.tokensPerSec.toFixed(1)} t/s` : 'Metrics'}
+                      </span>
                       {msg.metrics.tokensGenerated && (
-                        <span>• {msg.metrics.tokensGenerated} tokens</span>
+                        <span>{msg.metrics.tokensGenerated} tokens</span>
                       )}
-                      {msg.metrics.spikeCount !== undefined && msg.metrics.spikeCount > 0 && (
-                        <span className="text-amber-600 font-semibold">• {msg.metrics.spikeCount} {msg.metrics.spikeCount === 1 ? 'spike' : 'spikes'}</span>
+                      {msg.metrics.timeToFirstTokenMs && (
+                        <span>• {(msg.metrics.timeToFirstTokenMs / 1000).toFixed(2)}s TTFT</span>
                       )}
                       {msg.metrics.backendUsed && (
-                        <span className="uppercase">• {msg.metrics.backendUsed}</span>
+                        <span className="uppercase text-zinc-500 font-bold">• {msg.metrics.backendUsed === 'webgpu' ? 'GPU' : 'CPU'}</span>
                       )}
-                      <span className="ml-auto text-[9px] text-zinc-400 group-hover:text-black underline opacity-0 group-hover:opacity-100 transition-opacity hidden xs:inline">
-                        View Chart &rarr;
-                      </span>
                     </button>
                   )}
                 </div>
@@ -455,26 +473,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
             {/* Streaming Bubble */}
             {isGenerating && (
-              <div className="flex gap-2 max-w-[90%] sm:max-w-2xl mr-auto justify-start">
-                <div className="relative rounded-3xl rounded-bl-xs px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm leading-relaxed liquid-glass-card text-black shadow-xs">
+              <div className="flex gap-2 max-w-[92%] sm:max-w-2xl mr-auto justify-start">
+                <div className="relative rounded-2xl p-4 text-sm leading-relaxed bg-white/85 backdrop-blur-md text-black border-2 border-black shadow-[4px_4px_0px_0px_#000]">
                   <div>
                     {streamingContent ? (
                       <FormattedMessage content={streamingContent} isUser={false} />
                     ) : (
-                      <span className="text-zinc-400 italic font-mono text-xs">Generating locally...</span>
+                      <span className="text-zinc-500 font-mono text-xs font-bold italic">Generating response on GPU...</span>
                     )}
-                    <span className="inline-block w-1.5 h-3.5 ml-1 bg-black animate-pulse align-middle" />
+                    <span className="inline-block w-2.5 h-4 ml-1 bg-black animate-pulse align-middle" />
                   </div>
 
                   {streamingMetrics.tokensPerSec !== undefined && streamingMetrics.tokensPerSec > 0 && (
-                    <div className="mt-2 pt-1.5 border-t border-black/[0.05] flex items-center gap-1.5 sm:gap-2 text-[10px] font-mono text-zinc-500">
-                      <Activity className="w-3 h-3 text-emerald-600 animate-pulse shrink-0" />
-                      <span>{streamingMetrics.tokensPerSec.toFixed(1)} tok/s</span>
+                    <div className="mt-3 pt-2 border-t border-black/10 flex items-center gap-2 text-[10px] font-mono text-zinc-600 font-bold">
+                      <span className="flex items-center gap-1 font-bold text-emerald-900 bg-emerald-300 px-2 py-0.5 rounded border border-black">
+                        <Activity className="w-3 h-3 text-emerald-900 animate-pulse" />
+                        {streamingMetrics.tokensPerSec.toFixed(1)} t/s
+                      </span>
                       {streamingMetrics.tokensGenerated && (
                         <span>• {streamingMetrics.tokensGenerated} tokens</span>
-                      )}
-                      {streamingMetrics.spikeCount !== undefined && streamingMetrics.spikeCount > 0 && (
-                        <span className="text-amber-600 font-semibold">• {streamingMetrics.spikeCount} {streamingMetrics.spikeCount === 1 ? 'spike' : 'spikes'}</span>
                       )}
                     </div>
                   )}
@@ -487,12 +504,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
       </div>
 
-      {/* Chat Input Bar docked naturally above the bottom nav */}
-      <div className="shrink-0 w-full z-40 px-3 sm:px-4 pt-1.5 pb-[calc(4.75rem+env(safe-area-inset-bottom))]">
-        <div className="max-w-2xl mx-auto">
+      {/* Clean Bottom Input Box */}
+      <div className="shrink-0 w-full z-30 px-3 sm:px-6 py-3 bg-white/80 backdrop-blur-xl border-t-2 border-black">
+        <div className="max-w-3xl mx-auto">
           <form
             onSubmit={handleSubmit}
-            className="liquid-glass-dock rounded-3xl sm:rounded-full pl-3.5 sm:pl-4 pr-1.5 sm:pr-2 py-1.5 flex items-end gap-2 border border-black/[0.08] shadow-md min-h-[48px]"
+            className="brutalist-card p-2 sm:p-2.5 flex items-end gap-2"
           >
             <textarea
               ref={textareaRef}
@@ -503,11 +520,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               onKeyDown={handleKeyDown}
               placeholder={
                 activeModel
-                  ? `Message ${activeModel.name}...`
+                  ? `Prompt ${activeModel.name}...`
                   : 'Select or download a model first...'
               }
               disabled={!activeModel || isGenerating}
-              className="flex-1 resize-none bg-transparent text-base sm:text-sm text-black placeholder:text-zinc-400 focus:outline-none py-1.5 max-h-24 leading-normal"
+              className="flex-1 resize-none bg-transparent text-sm text-black placeholder:text-zinc-400 focus:outline-none py-2 px-1 max-h-24 leading-normal font-sans font-medium"
             />
 
             {isGenerating ? (
@@ -515,22 +532,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 type="button"
                 id="stop-generation-button"
                 onClick={onStopGeneration}
-                className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-black text-white hover:bg-zinc-800 flex items-center justify-center shrink-0 transition-colors shadow-xs my-auto"
+                className="px-4 py-2.5 rounded-xl bg-rose-500 text-white hover:bg-rose-600 flex items-center justify-center gap-1.5 shrink-0 transition-all font-bold text-xs border-2 border-black shadow-[2px_2px_0px_0px_#000] my-auto cursor-pointer"
                 title="Stop generation"
                 aria-label="Stop generation"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
+                <span>Stop</span>
               </button>
             ) : (
               <button
                 type="submit"
                 id="send-message-button"
                 disabled={!inputText.trim() || !activeModel}
-                className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-black text-white hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-black flex items-center justify-center shrink-0 transition-all shadow-xs my-auto"
-                title="Send"
+                className="px-4 py-2.5 rounded-xl bg-black text-white hover:bg-zinc-800 disabled:opacity-30 flex items-center justify-center gap-1.5 shrink-0 transition-all font-bold text-xs border-2 border-black shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none my-auto cursor-pointer"
+                title="Send prompt"
                 aria-label="Send message"
               >
-                <ArrowUp className="w-4 h-4" />
+                <span>Send</span>
+                <ArrowUp className="w-4 h-4 stroke-[3]" />
               </button>
             )}
           </form>

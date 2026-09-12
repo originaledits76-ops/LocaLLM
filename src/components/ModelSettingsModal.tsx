@@ -57,7 +57,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               Inference Parameters
             </h3>
             <p className="text-xs text-zinc-500 mt-0.5">
-              Tune local ONNX Runtime decoding behaviors
+              Tune local model decoding behaviors
             </p>
           </div>
           <button
@@ -202,12 +202,12 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             />
           </div>
 
-          {/* Fast Mode (Greedy / KV Cache optimization) */}
+          {/* Fast Mode */}
           <div className="flex items-center justify-between p-3 rounded-xl border border-black/10 bg-zinc-50">
             <div className="pr-2">
               <p className="font-semibold text-black">High-Speed Fast Mode</p>
               <p className="text-[10px] text-zinc-500">
-                Optimized greedy decoding & KV tensor cache for 4–15+ tokens/sec on CPU & mobile.
+                Optimized decoding for high tokens/sec throughput.
               </p>
             </div>
             <input
@@ -223,9 +223,9 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           {/* Prefer WebGPU */}
           <div className="flex items-center justify-between p-3 rounded-xl border border-black/10 bg-zinc-50">
             <div className="pr-2">
-              <p className="font-semibold text-black">Prefer WebGPU Acceleration</p>
+              <p className="font-semibold text-black">Prefer Hardware GPU Acceleration</p>
               <p className="text-[10px] text-zinc-500">
-                Uses GPU shader matrices when browser supports it, with WASM fallback.
+                Uses device GPU when supported, with CPU fallback.
               </p>
             </div>
             <input

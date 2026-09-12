@@ -75,8 +75,8 @@ export default function App() {
     topP: 0.9,
     topK: 40,
     fastMode: true,
-    systemPrompt: 'You are a helpful and concise AI assistant running locally in the browser via ONNX Runtime Web.',
-    preferWebGpu: true // Auto-detects WebGPU for 15-40 tok/s with seamless multi-threaded WASM fallback
+    systemPrompt: 'You are a helpful and concise AI assistant running locally on-device in the browser.',
+    preferWebGpu: true
   });
   const [savedNotice, setSavedNotice] = useState<boolean>(false);
 
@@ -430,23 +430,96 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-[100dvh] ambient-bg text-black flex flex-col font-sans antialiased selection:bg-black selection:text-white relative">
-      {/* Ambient background blur elements */}
-      <div className="fixed top-20 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-b from-black/[0.025] to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="fixed bottom-20 right-10 w-80 h-80 bg-black/[0.015] rounded-full blur-3xl pointer-events-none -z-10" />
+    <div className="min-h-[100dvh] brutalist-bg text-black flex flex-col font-sans antialiased selection:bg-amber-300 selection:text-black relative">
+      {/* Top Neubrutalist Header Navigation */}
+      <header className="sticky top-0 z-40 brutalist-header px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 shadow-[0_2px_0_0_#000]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_#000] shrink-0">
+            <Sparkles className="w-5 h-5 text-amber-300" />
+          </div>
+          <div className="hidden xs:block">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-black tracking-tight text-black font-display uppercase">
+                POCKET LOCAL AI
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-400 text-black border border-black shadow-[1px_1px_0px_0px_#000]">
+                PRIVATE
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Header Navigation Tabs */}
+        <nav className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-0.5 scrollbar-none">
+          <button
+            id="nav-models"
+            onClick={() => setActiveTab('models')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black ${
+              activeTab === 'models'
+                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
+                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Models</span>
+          </button>
+
+          <button
+            id="nav-chat"
+            onClick={() => setActiveTab('chat')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black relative ${
+              activeTab === 'chat'
+                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
+                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Chat</span>
+            {installedModels.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black" />
+            )}
+          </button>
+
+          <button
+            id="nav-hardware"
+            onClick={() => setActiveTab('hardware')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black ${
+              activeTab === 'hardware'
+                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
+                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Hardware</span>
+          </button>
+
+          <button
+            id="nav-settings"
+            onClick={() => setActiveTab('settings')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black ${
+              activeTab === 'settings'
+                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
+                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
+        </nav>
+      </header>
 
       {/* Floating Status Toast */}
       {toastNotice && (
-        <div className="fixed top-3 sm:top-4 left-1/2 -translate-x-1/2 z-50 liquid-glass-dock rounded-full px-4 py-2 sm:py-1.5 text-xs font-medium text-black shadow-lg flex items-center gap-2 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-top-2 duration-150">
-          <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping shrink-0" />
-          <span className="truncate">{toastNotice}</span>
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 brutalist-card px-4 py-2 text-xs font-bold text-black shadow-[4px_4px_0px_0px_#000] flex items-center gap-2 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-top-2 duration-150">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black animate-ping shrink-0" />
+          <span className="truncate font-mono">{toastNotice}</span>
         </div>
       )}
 
       {/* Main View Area */}
       {activeTab === 'chat' ? (
-        /* Full Page Chat Interface */
-        <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
+        /* Full View Chat Interface - No Bottom Bar Blocking Input */
+        <div className="flex-1 w-full flex flex-col overflow-hidden h-[calc(100dvh-57px)]">
           <ChatInterface
             activeModel={activeModel}
             installedModels={installedModels}
@@ -466,37 +539,7 @@ export default function App() {
         </div>
       ) : (
         /* Content for Models, Hardware, and Settings tabs */
-        <div className="flex-1 w-full max-w-4xl mx-auto px-3.5 sm:px-6 pt-4 sm:pt-6 pb-28 sm:pb-24">
-          {/* Subtle Minimal Top Bar */}
-          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 pb-4 sm:pb-5 mb-5 sm:mb-6 border-b border-black/[0.06]">
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <div className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-xs shrink-0">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold tracking-tight text-black flex items-center gap-2">
-                  Local Model Advisor
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-black/10 text-zinc-600 bg-white/60">
-                    ONNX Web
-                  </span>
-                </h1>
-                <p className="text-xs text-zinc-400">
-                  {installedModels.length} of {AVAILABLE_MODELS.length} models installed
-                </p>
-              </div>
-            </div>
-
-            {installedModels.length > 0 && (
-              <button
-                onClick={() => setActiveTab('chat')}
-                className="self-start xs:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-full bg-black text-white text-xs font-semibold hover:bg-zinc-800 transition-all shadow-xs min-h-[36px]"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Open Chat</span>
-              </button>
-            )}
-          </div>
-
+        <div className="flex-1 w-full max-w-5xl mx-auto px-3.5 sm:px-6 py-6 pb-12">
           {activeTab === 'models' && (
             <div className="space-y-6">
               <ModelCatalog
@@ -523,14 +566,14 @@ export default function App() {
 
           {activeTab === 'settings' && (
             <div className="space-y-4 max-w-xl mx-auto">
-              <div className="liquid-glass-card rounded-3xl p-4 sm:p-6 space-y-4 sm:space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <div className="brutalist-card p-5 sm:p-6 space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b-2 border-black">
                   <div>
-                    <h2 className="text-base font-bold text-black tracking-tight">
-                      Inference Settings
+                    <h2 className="text-lg font-black text-black tracking-tight font-display">
+                      INFERENCE CONFIGURATION
                     </h2>
-                    <p className="text-xs text-zinc-500">
-                      WebLLM WebGPU & ONNX decoding parameters
+                    <p className="text-xs text-zinc-600 font-medium">
+                      Configure parameters and hardware acceleration
                     </p>
                   </div>
                   <button
@@ -545,19 +588,19 @@ export default function App() {
                       setSavedNotice(true);
                       setTimeout(() => setSavedNotice(false), 2000);
                     }}
-                    className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-black font-medium transition-colors p-1"
+                    className="inline-flex items-center gap-1 text-xs text-black font-bold brutalist-pill px-2.5 py-1 bg-amber-300 hover:bg-amber-400"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Reset</span>
                   </button>
                 </div>
 
-                <div className="space-y-4 text-xs">
+                <div className="space-y-5 text-xs">
                   {/* Temperature */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-black">Temperature</span>
-                      <span className="font-mono text-zinc-500">{settings.temperature.toFixed(2)}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="text-black uppercase tracking-wider">Temperature</span>
+                      <span className="font-mono bg-zinc-100 px-2 py-0.5 rounded border border-black">{settings.temperature.toFixed(2)}</span>
                     </div>
                     <input
                       type="range"
@@ -568,17 +611,17 @@ export default function App() {
                       onChange={(e) => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
                       className="w-full accent-black cursor-pointer h-2"
                     />
-                    <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
+                    <div className="flex justify-between text-[10px] text-zinc-500 font-mono font-semibold">
                       <span>Focused (0.0)</span>
                       <span>Creative (1.5)</span>
                     </div>
                   </div>
 
                   {/* Max Tokens */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-black">Max Tokens</span>
-                      <span className="font-mono text-zinc-500">{settings.maxTokens}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="text-black uppercase tracking-wider">Max Output Tokens</span>
+                      <span className="font-mono bg-zinc-100 px-2 py-0.5 rounded border border-black">{settings.maxTokens}</span>
                     </div>
                     <input
                       type="range"
@@ -592,35 +635,35 @@ export default function App() {
                   </div>
 
                   {/* Prefer WebGPU */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/60 border border-black/[0.06]">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-100/60 border-2 border-black shadow-[3px_3px_0px_0px_#000]">
                     <div>
-                      <p className="font-semibold text-black">WebGPU Hardware Acceleration</p>
-                      <p className="text-[11px] text-zinc-400">Uses GPU shader execution with WASM fallback</p>
+                      <p className="font-bold text-black uppercase tracking-wider text-xs">Hardware GPU Acceleration</p>
+                      <p className="text-[11px] text-zinc-700 font-medium">Uses GPU hardware acceleration when supported</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={settings.preferWebGpu}
                       onChange={(e) => setSettings({ ...settings, preferWebGpu: e.target.checked })}
-                      className="w-5 h-5 accent-black cursor-pointer rounded shrink-0"
+                      className="w-5 h-5 accent-black cursor-pointer rounded shrink-0 border-2 border-black"
                     />
                   </div>
 
                   {/* System Prompt */}
-                  <div className="space-y-1.5">
-                    <span className="font-semibold text-black">System Instructions</span>
+                  <div className="space-y-2">
+                    <span className="font-bold text-black uppercase tracking-wider block">System Instructions</span>
                     <textarea
                       rows={3}
                       value={settings.systemPrompt}
                       onChange={(e) => setSettings({ ...settings, systemPrompt: e.target.value })}
-                      className="w-full p-3 rounded-2xl border border-black/10 bg-white/70 text-xs text-black focus:outline-none focus:border-black font-mono leading-relaxed resize-none"
+                      className="w-full p-3 rounded-xl border-2 border-black bg-white text-xs text-black focus:outline-none font-mono leading-relaxed resize-none shadow-[3px_3px_0px_0px_#000]"
                     />
                   </div>
                 </div>
 
                 {savedNotice && (
-                  <div className="p-2 rounded-xl bg-black text-white text-xs flex items-center justify-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Settings reset to defaults</span>
+                  <div className="p-3 rounded-xl bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_#000]">
+                    <Check className="w-4 h-4" />
+                    <span>Settings reset to defaults!</span>
                   </div>
                 )}
               </div>
@@ -628,80 +671,6 @@ export default function App() {
           )}
         </div>
       )}
-
-      {/* Floating Liquid Glass Bottom Navigation Dock - Icons Only */}
-      <nav
-        id="bottom-nav-dock"
-        aria-label="Main Navigation"
-        className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] sm:bottom-5 left-1/2 -translate-x-1/2 z-50 liquid-glass-dock rounded-full p-1.5 flex items-center justify-center gap-1 sm:gap-2 border border-black/[0.08] shadow-lg backdrop-blur-xl"
-      >
-        {/* Models Tab */}
-        <button
-          id="nav-models"
-          onClick={() => setActiveTab('models')}
-          title="Explore Models"
-          aria-label="Models"
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-            activeTab === 'models'
-              ? 'bg-black text-white shadow-xs scale-105'
-              : 'text-zinc-600 hover:text-black hover:bg-black/5'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 shrink-0" />
-        </button>
-
-        {/* Chat Tab */}
-        <button
-          id="nav-chat"
-          onClick={() => setActiveTab('chat')}
-          title="Local AI Chat"
-          aria-label="Chat"
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all relative ${
-            activeTab === 'chat'
-              ? 'bg-black text-white shadow-xs scale-105'
-              : 'text-zinc-600 hover:text-black hover:bg-black/5'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4 shrink-0" />
-          {installedModels.length > 0 && (
-            <span
-              className={`absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full ring-1 ${
-                activeTab === 'chat' ? 'bg-white ring-black' : 'bg-black ring-white'
-              }`}
-            />
-          )}
-        </button>
-
-        {/* Hardware Specs Tab */}
-        <button
-          id="nav-hardware"
-          onClick={() => setActiveTab('hardware')}
-          title="Hardware Diagnostics & Benchmarks"
-          aria-label="Hardware Diagnostics"
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-            activeTab === 'hardware'
-              ? 'bg-black text-white shadow-xs scale-105'
-              : 'text-zinc-600 hover:text-black hover:bg-black/5'
-          }`}
-        >
-          <Cpu className="w-4 h-4 shrink-0" />
-        </button>
-
-        {/* Settings Tab */}
-        <button
-          id="nav-settings"
-          onClick={() => setActiveTab('settings')}
-          title="Inference Settings"
-          aria-label="Inference Settings"
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-            activeTab === 'settings'
-              ? 'bg-black text-white shadow-xs scale-105'
-              : 'text-zinc-600 hover:text-black hover:bg-black/5'
-          }`}
-        >
-          <Sliders className="w-4 h-4 shrink-0" />
-        </button>
-      </nav>
     </div>
   );
 }
