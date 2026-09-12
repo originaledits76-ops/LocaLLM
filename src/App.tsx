@@ -60,7 +60,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('home');
 
   // Runtime Models State
-  const [activeModelId, setActiveModelId] = useState<string | null>(null);
+  const [activeModelId, setActiveModelId] = useState<string | null>(
+    AVAILABLE_MODELS[0]?.id || 'SmolLM2-135M-Instruct-2Bit-ONNX'
+  );
   const [runtimeStates, setRuntimeStates] = useState<Record<string, ModelRuntimeState>>({});
 
   // Chat State
@@ -371,41 +373,63 @@ export default function App() {
    * Send chat message and stream response from local model
    */
   const handleSendMessage = async (text: string) => {
-    if (!activeModelId || isGenerating) return;
+    if (!text.trim() || isGenerating) return;
 
-    if (!isModelLoaded(activeModelId)) {
-      setToastNotice(`Preparing ${activeModel?.name || 'model'}...`);
-      const res = await installOrLoadModel(activeModelId, settings.preferWebGpu);
-      if (!res.success) {
-        setToastNotice(`Init error: ${res.error}`);
-        return;
-      }
-    }
+    const targetModelId = activeModelId || AVAILABLE_MODELS[0].id;
+    const targetModel = AVAILABLE_MODELS.find((m) => m.id === targetModelId) || AVAILABLE_MODELS[0];
 
+    // Ensure we are in the chat view
+    setActiveTab('chat');
+
+    // 1. Append user message IMMEDIATELY to UI & IndexedDB so user sees prompt instantly
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: text,
       timestamp: Date.now(),
-      modelId: activeModelId
+      modelId: targetModelId
     };
 
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     await idbSaveMessage(userMessage);
 
     setIsGenerating(true);
-    setStreamingContent('');
+    setStreamingContent('Initializing AI engine...');
     setStreamingMetrics({});
     setLiveTelemetry([]);
 
-    const conversation = newMessages.map((m) => ({
-      role: m.role,
-      content: m.content
-    }));
-
     try {
-      let finalMetrics = streamingMetrics;
+      // 2. Initialize / load model with live progress updates if not loaded in VRAM/RAM
+      if (!isModelLoaded(targetModelId)) {
+        setStreamingContent(`Preparing ${targetModel.name}...`);
+        const res = await installOrLoadModel(
+          targetModelId,
+          settings.preferWebGpu,
+          (progressData) => {
+            if (progressData.stage) {
+              const pct = typeof progressData.progress === 'number' && progressData.progress > 0
+                ? ` (${progressData.progress}%)`
+                : '';
+              setStreamingContent(`Loading ${targetModel.name}: ${progressData.stage}${pct}`);
+            }
+          }
+        );
+
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to initialize local model in browser');
+        }
+      }
+
+      // 3. Clear progress text before starting token stream
+      setStreamingContent('');
+
+      const conversation = currentMessages.map((m) => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      let finalMetrics: any = {};
       let collectedTelemetry: TelemetryPoint[] = [];
 
       const generatedText = await streamChatCompletion(
@@ -439,27 +463,27 @@ export default function App() {
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: generatedText,
+        content: generatedText || 'Done.',
         timestamp: Date.now(),
-        modelId: activeModelId,
+        modelId: targetModelId,
         metrics: {
           ...finalMetrics,
           telemetry: finalMetrics.telemetry || collectedTelemetry
         }
       };
 
-      setMessages([...newMessages, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
       await idbSaveMessage(assistantMessage);
     } catch (err: any) {
       console.error('Inference error:', err);
       const errorMessage: ChatMessage = {
         id: `err-${Date.now()}`,
         role: 'assistant',
-        content: `Error during local inference: ${err?.message || 'ONNX execution failure'}.`,
+        content: `Unable to complete inference with ${targetModel.name}: ${err?.message || 'Execution error'}.\n\n*Tip: Try selecting another model from the catalog or enabling CPU WASM mode in Settings.*`,
         timestamp: Date.now(),
-        modelId: activeModelId
+        modelId: targetModelId
       };
-      setMessages([...newMessages, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
       await idbSaveMessage(errorMessage);
     } finally {
       setIsGenerating(false);
