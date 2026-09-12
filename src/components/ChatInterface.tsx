@@ -15,7 +15,8 @@ import {
   Zap,
   ChevronDown,
   Layers,
-  Activity
+  Activity,
+  Plus
 } from 'lucide-react';
 import { ChatMessage, InferenceSettings, ModelInfo, TelemetryPoint } from '../types';
 import { PerformanceMonitor } from './PerformanceMonitor';
@@ -176,32 +177,36 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden brutalist-bg">
-      {/* Top Neubrutalist Sub-Header for Chat */}
-      <header className="shrink-0 z-30 brutalist-header px-3 sm:px-6 py-2 sm:py-2.5">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-          {/* Model Switcher Dropdown */}
+    <div className="flex flex-col h-full w-full relative overflow-hidden aidora-bg">
+      {/* Top Aidora Header Bar */}
+      <header className="shrink-0 z-30 px-3 sm:px-6 py-3 bg-white/70 backdrop-blur-xl border-b border-zinc-200/50">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
+          {/* Back Button Circle */}
+          <button
+            onClick={onNavigateToModels}
+            className="w-10 h-10 rounded-full bg-white border border-zinc-200/80 hover:border-zinc-400 text-zinc-800 flex items-center justify-center shadow-2xs transition-all hover:scale-105"
+            title="Back to Catalog"
+          >
+            <ChevronDown className="w-5 h-5 rotate-90 stroke-[2.5]" />
+          </button>
+
+          {/* Center Model Selector Dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowModelDropdown(!showModelDropdown)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border-2 border-black font-bold text-xs text-black bg-white hover:bg-amber-100 transition-all shadow-[2px_2px_0px_0px_#000] min-h-[38px]"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-200/80 font-display font-bold text-xs text-zinc-900 bg-white hover:bg-zinc-50 transition-all shadow-2xs min-h-[40px]"
             >
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-black animate-pulse shrink-0" />
-              <span className="truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px] font-mono font-bold">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px]">
                 {activeModel ? activeModel.name : 'Select Model'}
               </span>
-              {activeModel && (
-                <span className="hidden xs:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-black text-white">
-                  {activeModel.parameterCount}
-                </span>
-              )}
-              <ChevronDown className="w-4 h-4 text-black shrink-0 ml-0.5" />
+              <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0 ml-0.5" />
             </button>
 
             {showModelDropdown && (
-              <div className="absolute top-full left-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 rounded-xl brutalist-card p-2 shadow-[6px_6px_0px_0px_#000] z-50 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1 text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider">
-                  Installed Local Models
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 rounded-[24px] bg-white p-2.5 shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">
+                  Installed Models
                 </div>
                 {installedModels.length === 0 ? (
                   <div className="px-3 py-3 text-xs text-zinc-600 text-center font-medium">
@@ -212,9 +217,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           setShowModelDropdown(false);
                           onNavigateToModels();
                         }}
-                        className="block mt-2.5 mx-auto px-4 py-2 rounded-xl bg-black text-white text-xs font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:bg-zinc-800 transition-colors"
+                        className="block mt-2.5 mx-auto px-4 py-2 rounded-full bg-[#18181b] text-white text-xs font-bold hover:bg-zinc-800 transition-colors"
                       >
-                        Explore Models Catalog
+                        Explore Catalog
                       </button>
                     )}
                   </div>
@@ -226,20 +231,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         onSwitchModel(m.id);
                         setShowModelDropdown(false);
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition-colors min-h-[40px] border my-1 ${
+                      className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors min-h-[42px] ${
                         activeModel?.id === m.id
-                          ? 'bg-black text-white font-bold border-black'
-                          : 'text-black bg-white hover:bg-zinc-100 border-zinc-200'
+                          ? 'bg-[#18181b] text-white font-bold shadow-2xs'
+                          : 'text-zinc-900 bg-white hover:bg-zinc-100'
                       }`}
                     >
                       <div className="truncate pr-2">
                         <p className="font-bold truncate">{m.name}</p>
-                        <p className={`text-[10px] font-mono ${activeModel?.id === m.id ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                        <p className={`text-[10px] font-mono ${activeModel?.id === m.id ? 'text-zinc-400' : 'text-zinc-500'}`}>
                           {m.parameterCount} • {m.quantization}
                         </p>
                       </div>
                       {activeModel?.id === m.id && (
-                        <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                        <Check className="w-4 h-4 shrink-0 text-[#c7f43a]" />
                       )}
                     </button>
                   ))
@@ -248,83 +253,37 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             )}
           </div>
 
-          {/* Right Action Bar */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {messages.length > 0 && (
-              <div 
-                className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border-2 border-black text-[11px] font-mono font-bold text-black shadow-[2px_2px_0px_0px_#000]"
-                title={`${messages.length} conversational turns active in model memory context`}
-              >
-                <Layers className="w-3.5 h-3.5 text-black" />
-                <span>{messages.length} turns</span>
-              </div>
-            )}
-
+          {/* Right Action Icons */}
+          <div className="flex items-center gap-2">
             <button
               id="toggle-telemetry-button"
               type="button"
               onClick={() => setShowTelemetry(!showTelemetry)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-black text-xs font-mono font-bold transition-all shadow-[2px_2px_0px_0px_#000] min-h-[36px] ${
-                showTelemetry
-                  ? 'bg-amber-300 text-black'
-                  : 'bg-white hover:bg-zinc-100 text-black'
+              className={`w-10 h-10 rounded-full border border-zinc-200/80 flex items-center justify-center transition-all shadow-2xs ${
+                showTelemetry ? 'bg-[#18181b] text-[#c7f43a]' : 'bg-white text-zinc-700 hover:text-black'
               }`}
-              title="Toggle Performance Telemetry HUD"
+              title="Toggle Performance Telemetry"
               aria-label="Toggle Performance Telemetry"
             >
-              <Activity className={`w-3.5 h-3.5 ${isGenerating ? 'animate-pulse text-emerald-600' : ''}`} />
-              <span className="hidden xs:inline">Telemetry</span>
-              {streamingMetrics.tokensPerSec !== undefined && streamingMetrics.tokensPerSec > 0 ? (
-                <span className="font-bold text-emerald-700 bg-white px-1.5 rounded border border-black">{streamingMetrics.tokensPerSec.toFixed(1)} t/s</span>
-              ) : activeAvgTps > 0 ? (
-                <span className="text-[11px] opacity-90">{activeAvgTps.toFixed(1)} t/s</span>
-              ) : null}
-            </button>
-
-            <button
-              id="clear-chat-button"
-              onClick={onClearChat}
-              disabled={messages.length === 0 && !streamingContent}
-              className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl border-2 border-black text-black bg-white hover:bg-rose-100 disabled:opacity-40 transition-colors shadow-[2px_2px_0px_0px_#000] shrink-0"
-              title="Clear conversation"
-              aria-label="Clear conversation"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Activity className="w-4 h-4" />
             </button>
 
             <button
               id="open-settings-button"
               onClick={onOpenSettings}
-              className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl border-2 border-black text-black bg-white hover:bg-zinc-100 transition-colors shadow-[2px_2px_0px_0px_#000] shrink-0"
+              className="w-10 h-10 rounded-full bg-white border border-zinc-200/80 hover:border-zinc-400 text-zinc-800 flex items-center justify-center shadow-2xs transition-all hover:scale-105"
               title="Inference Settings"
               aria-label="Inference Settings"
             >
-              <Sliders className="w-3.5 h-3.5" />
+              <Sliders className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Hardware Optimization Status Banner */}
-      <HardwareOptimizationBanner />
-
       {/* Visual Performance Monitor HUD */}
       {showTelemetry && (
-        <div className="shrink-0 max-w-4xl w-full mx-auto px-3 sm:px-6 pt-2 pb-1 transition-all">
-          {inspectedMessage && (
-            <div className="mb-1.5 px-3 py-1.5 rounded-xl bg-amber-200 border-2 border-black flex items-center justify-between text-[11px] font-mono shadow-[2px_2px_0px_0px_#000]">
-              <span className="text-black font-bold truncate mr-2">
-                Inspecting snapshot from {new Date(inspectedMessage.timestamp).toLocaleTimeString()}
-              </span>
-              <button
-                type="button"
-                onClick={() => setInspectedMessageId(null)}
-                className="text-black font-extrabold hover:underline shrink-0 text-[11px]"
-              >
-                &larr; Return to Live Stream
-              </button>
-            </div>
-          )}
+        <div className="shrink-0 max-w-3xl w-full mx-auto px-3 sm:px-6 pt-2 pb-1 transition-all">
           <PerformanceMonitor
             telemetry={activeTelemetryData}
             isGenerating={isGenerating && !inspectedMessageId}
@@ -346,25 +305,34 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-4 max-w-3xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 max-w-3xl mx-auto w-full pb-32">
+        {/* Dynamic Topic Headline matching Aidora screen 3 */}
+        {messages.length > 0 && messages[0].role === 'user' && (
+          <div className="pt-1 pb-2">
+            <h2 className="text-xl sm:text-2xl font-extrabold font-display text-zinc-900 tracking-tight leading-tight">
+              {messages[0].content.length > 45 ? `${messages[0].content.slice(0, 45)}...` : messages[0].content}
+            </h2>
+          </div>
+        )}
+
         {messages.length === 0 && !streamingContent ? (
           /* Empty / Welcome State */
           <div className="min-h-[50vh] flex flex-col items-center justify-center text-center max-w-xl mx-auto py-8 px-2">
-            <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-4 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
-              <Sparkles className="w-7 h-7 text-amber-300" />
+            <div className="w-14 h-14 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center mb-4 shadow-md">
+              <Sparkles className="w-7 h-7" />
             </div>
 
-            <h3 className="text-2xl sm:text-3xl font-black font-display text-black tracking-tight uppercase">
-              {activeModel ? activeModel.name : 'Pocket Local AI'}
+            <h3 className="text-2xl sm:text-3xl font-extrabold font-display text-zinc-900 tracking-tight">
+              {activeModel ? activeModel.name : 'Aidora On-Device AI'}
             </h3>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-3 mb-6 text-xs font-mono font-bold">
-              <span className="px-3 py-1 rounded-xl bg-emerald-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-black" />
-                100% On-Device Private
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-3 mb-6 text-xs font-semibold">
+              <span className="px-3.5 py-1.5 rounded-full bg-white border border-zinc-200 text-zinc-800 shadow-2xs flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                100% Private On-Device
               </span>
-              <span className="px-3 py-1 rounded-xl bg-amber-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-black" />
+              <span className="px-3.5 py-1.5 rounded-full bg-[#e2f779] text-zinc-900 border border-black/5 shadow-2xs flex items-center gap-1.5 font-bold">
+                <Zap className="w-3.5 h-3.5" />
                 Zero Latency
               </span>
             </div>
@@ -372,35 +340,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {/* Starter Prompt Cards */}
             {activeModel && activeModel.samplePrompts.length > 0 ? (
               <div className="w-full space-y-3 text-left">
-                <p className="text-xs font-bold text-zinc-600 uppercase tracking-wider px-1 font-mono">
-                  Prompt Ideas
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1 font-display">
+                  Suggested Prompts
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {activeModel.samplePrompts.slice(0, 4).map((prompt, idx) => (
                     <button
                       key={idx}
                       onClick={() => onSendMessage(prompt)}
-                      className="text-left p-4 rounded-xl brutalist-card-interactive group flex flex-col justify-between min-h-[80px]"
+                      className="text-left p-4 rounded-[24px] bg-white border border-zinc-200/80 shadow-2xs hover:shadow-md hover:border-zinc-300 group flex flex-col justify-between min-h-[84px] transition-all"
                     >
-                      <span className="text-xs font-bold text-black leading-snug">
+                      <span className="text-xs font-medium text-zinc-900 leading-relaxed">
                         "{prompt}"
                       </span>
-                      <span className="mt-3 text-[10px] font-mono font-bold text-zinc-500 group-hover:text-black flex items-center gap-1">
-                        Send Prompt &rarr;
+                      <span className="mt-3 text-[11px] font-bold text-zinc-400 group-hover:text-[#18181b] flex items-center gap-1">
+                        Ask Aidora &rarr;
                       </span>
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : !activeModel ? (
-              <div className="mt-4">
-                <button
-                  onClick={onNavigateToModels}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white text-xs font-bold border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:bg-zinc-800 transition-all min-h-[44px]"
-                >
-                  <Layers className="w-4 h-4 text-amber-300" />
-                  <span>Explore & Download Models</span>
-                </button>
               </div>
             ) : null}
           </div>
@@ -409,15 +367,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-2 max-w-[92%] sm:max-w-2xl ${
+                className={`flex gap-3 max-w-[94%] sm:max-w-xl ${
                   msg.role === 'user' ? 'ml-auto justify-end' : 'mr-auto justify-start'
                 }`}
               >
+                {/* Assistant Bot Icon Badge */}
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0 shadow-2xs mt-1">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                )}
+
                 <div
-                  className={`relative group rounded-2xl p-4 text-sm leading-relaxed border-2 border-black shadow-[4px_4px_0px_0px_#000] backdrop-blur-md ${
+                  className={`relative group rounded-[26px] p-4 sm:p-5 text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-black/90 text-white font-medium'
-                      : 'bg-white/85 text-black font-medium'
+                      ? 'bg-[#cbebf0] text-zinc-900 rounded-tr-md font-medium shadow-2xs'
+                      : 'bg-white text-zinc-900 rounded-tl-md font-medium shadow-2xs border border-zinc-200/60'
                   }`}
                 >
                   <div className="pr-6">
@@ -427,14 +392,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   {/* Copy Button */}
                   <button
                     onClick={() => handleCopy(msg.content, msg.id)}
-                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-lg opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity min-w-[28px] min-h-[28px] flex items-center justify-center border ${
-                      msg.role === 'user' ? 'text-zinc-300 hover:text-white bg-zinc-800 border-zinc-700' : 'text-zinc-600 hover:text-black bg-zinc-100 border-black'
-                    }`}
+                    className="absolute top-3 right-3 p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity text-zinc-500 hover:text-black hover:bg-black/5"
                     title="Copy message"
                     aria-label="Copy message"
                   >
                     {copiedId === msg.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
@@ -442,59 +405,43 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                   {/* Metrics Footnote */}
                   {msg.role === 'assistant' && msg.metrics && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInspectedMessageId(msg.id);
-                        setShowTelemetry(true);
-                        setIsTelemetryExpanded(true);
-                      }}
-                      className="mt-3 pt-2 border-t border-black/10 flex flex-wrap items-center gap-2 text-[10px] font-mono font-bold text-zinc-600 hover:text-black transition-colors w-full text-left group cursor-pointer"
-                      title="Inspect performance telemetry for this message"
-                    >
-                      <span className="flex items-center gap-1 font-bold text-emerald-900 bg-emerald-300 px-2 py-0.5 rounded border border-black">
-                        <Activity className="w-3 h-3 text-emerald-900" />
-                        {msg.metrics.tokensPerSec ? `${msg.metrics.tokensPerSec.toFixed(1)} t/s` : 'Metrics'}
-                      </span>
+                    <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center gap-2 text-[10px] font-mono text-zinc-400">
+                      {msg.metrics.tokensPerSec && (
+                        <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          {msg.metrics.tokensPerSec.toFixed(1)} t/s
+                        </span>
+                      )}
                       {msg.metrics.tokensGenerated && (
                         <span>{msg.metrics.tokensGenerated} tokens</span>
                       )}
-                      {msg.metrics.timeToFirstTokenMs && (
-                        <span>• {(msg.metrics.timeToFirstTokenMs / 1000).toFixed(2)}s TTFT</span>
-                      )}
-                      {msg.metrics.backendUsed && (
-                        <span className="uppercase text-zinc-500 font-bold">• {msg.metrics.backendUsed === 'webgpu' ? 'GPU' : 'CPU'}</span>
-                      )}
-                    </button>
+                    </div>
                   )}
                 </div>
+
+                {/* User Avatar Badge */}
+                {msg.role === 'user' && (
+                  <div className="w-8 h-8 rounded-full bg-sky-200 text-sky-900 border border-white flex items-center justify-center shrink-0 shadow-2xs mt-1 font-bold text-xs">
+                    👤
+                  </div>
+                )}
               </div>
             ))}
 
-            {/* Streaming Bubble */}
+            {/* Streaming Assistant Bubble */}
             {isGenerating && (
-              <div className="flex gap-2 max-w-[92%] sm:max-w-2xl mr-auto justify-start">
-                <div className="relative rounded-2xl p-4 text-sm leading-relaxed bg-white/85 backdrop-blur-md text-black border-2 border-black shadow-[4px_4px_0px_0px_#000]">
+              <div className="flex gap-3 max-w-[94%] sm:max-w-xl mr-auto justify-start">
+                <div className="w-8 h-8 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0 shadow-2xs mt-1">
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                </div>
+                <div className="relative rounded-[26px] rounded-tl-md p-4 sm:p-5 text-sm leading-relaxed bg-white text-zinc-900 font-medium shadow-2xs border border-zinc-200/60">
                   <div>
                     {streamingContent ? (
                       <FormattedMessage content={streamingContent} isUser={false} />
                     ) : (
-                      <span className="text-zinc-500 font-mono text-xs font-bold italic">Generating response on GPU...</span>
+                      <span className="text-zinc-400 font-medium text-xs">Generating response...</span>
                     )}
-                    <span className="inline-block w-2.5 h-4 ml-1 bg-black animate-pulse align-middle" />
+                    <span className="inline-block w-2 h-4 ml-1 bg-[#18181b] animate-pulse align-middle" />
                   </div>
-
-                  {streamingMetrics.tokensPerSec !== undefined && streamingMetrics.tokensPerSec > 0 && (
-                    <div className="mt-3 pt-2 border-t border-black/10 flex items-center gap-2 text-[10px] font-mono text-zinc-600 font-bold">
-                      <span className="flex items-center gap-1 font-bold text-emerald-900 bg-emerald-300 px-2 py-0.5 rounded border border-black">
-                        <Activity className="w-3 h-3 text-emerald-900 animate-pulse" />
-                        {streamingMetrics.tokensPerSec.toFixed(1)} t/s
-                      </span>
-                      {streamingMetrics.tokensGenerated && (
-                        <span>• {streamingMetrics.tokensGenerated} tokens</span>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -504,13 +451,37 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
       </div>
 
-      {/* Clean Bottom Input Box */}
-      <div className="shrink-0 w-full z-30 px-3 sm:px-6 py-3 bg-white/80 backdrop-blur-xl border-t-2 border-black">
-        <div className="max-w-3xl mx-auto">
+      {/* Floating Stop Generation Pill */}
+      {isGenerating && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40">
+          <button
+            type="button"
+            onClick={onStopGeneration}
+            className="bg-[#18181b] text-white px-5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg hover:bg-zinc-800 transition-all cursor-pointer"
+          >
+            <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
+            <span>Stop generate</span>
+          </button>
+        </div>
+      )}
+
+      {/* Aidora Clean Floating Bottom Input Bar */}
+      <div className="fixed bottom-4 left-0 right-0 z-30 px-3 sm:px-6">
+        <div className="max-w-2xl mx-auto">
           <form
             onSubmit={handleSubmit}
-            className="brutalist-card p-2 sm:p-2.5 flex items-end gap-2"
+            className="bg-white rounded-full p-2 pl-4 flex items-center gap-2 border border-zinc-200/80 shadow-lg shadow-zinc-300/30 min-h-[52px]"
           >
+            {/* Left Plus Icon */}
+            <button
+              type="button"
+              onClick={onNavigateToModels}
+              className="w-9 h-9 rounded-full text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 flex items-center justify-center shrink-0 transition-colors"
+              title="Add attachment / Select Model"
+            >
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+            </button>
+
             <textarea
               ref={textareaRef}
               id="chat-input-textarea"
@@ -518,40 +489,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                activeModel
-                  ? `Prompt ${activeModel.name}...`
-                  : 'Select or download a model first...'
-              }
+              placeholder="Ask me everything..."
               disabled={!activeModel || isGenerating}
-              className="flex-1 resize-none bg-transparent text-sm text-black placeholder:text-zinc-400 focus:outline-none py-2 px-1 max-h-24 leading-normal font-sans font-medium"
+              className="flex-1 resize-none bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none py-1.5 max-h-24 leading-normal font-sans font-medium"
             />
 
-            {isGenerating ? (
-              <button
-                type="button"
-                id="stop-generation-button"
-                onClick={onStopGeneration}
-                className="px-4 py-2.5 rounded-xl bg-rose-500 text-white hover:bg-rose-600 flex items-center justify-center gap-1.5 shrink-0 transition-all font-bold text-xs border-2 border-black shadow-[2px_2px_0px_0px_#000] my-auto cursor-pointer"
-                title="Stop generation"
-                aria-label="Stop generation"
-              >
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Stop</span>
-              </button>
-            ) : (
-              <button
-                type="submit"
-                id="send-message-button"
-                disabled={!inputText.trim() || !activeModel}
-                className="px-4 py-2.5 rounded-xl bg-black text-white hover:bg-zinc-800 disabled:opacity-30 flex items-center justify-center gap-1.5 shrink-0 transition-all font-bold text-xs border-2 border-black shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none my-auto cursor-pointer"
-                title="Send prompt"
-                aria-label="Send message"
-              >
-                <span>Send</span>
-                <ArrowUp className="w-4 h-4 stroke-[3]" />
-              </button>
-            )}
+            {/* Right Send Button (Electric Lime Circle) */}
+            <button
+              type="submit"
+              id="send-message-button"
+              disabled={!inputText.trim() || !activeModel || isGenerating}
+              className="aidora-lime-btn w-10 h-10 flex items-center justify-center shrink-0 disabled:opacity-30 disabled:hover:scale-100 shadow-2xs my-auto cursor-pointer"
+              title="Send prompt"
+              aria-label="Send message"
+            >
+              <ArrowUp className="w-5 h-5 text-[#18181b] stroke-[2.5]" />
+            </button>
           </form>
         </div>
       </div>

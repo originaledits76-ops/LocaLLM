@@ -1,6 +1,6 @@
 {
-  "name": "Local Model Advisor & Chat",
-  "description": "Checks device specs (RAM, CPU, WebGPU) and suggests comfortable openweight ONNX models to install and run locally in the browser.",
+  "name": "Aidora Local AI",
+  "description": "Clean, ultra-modern private AI chatbot running 100% on-device open-weight models with WebGPU acceleration.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

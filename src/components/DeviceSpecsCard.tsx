@@ -27,19 +27,19 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
   };
 
   return (
-    <div id="device-specs-container" className="brutalist-card p-5 sm:p-6 transition-all">
+    <div id="device-specs-container" className="aidora-card-white p-5 sm:p-6 transition-all">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b-2 border-black">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#000] shrink-0">
-            <Cpu className="w-5 h-5 text-amber-300" />
+          <div className="w-10 h-10 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0 shadow-2xs">
+            <Cpu className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-black tracking-tight text-black font-display uppercase">
-              Hardware Diagnostics & Profile
+            <h2 className="text-base font-extrabold tracking-tight text-zinc-900 font-display">
+              Hardware Diagnostics
             </h2>
-            <p className="text-xs text-zinc-600 font-mono font-bold">
-              {specs?.osName || 'System'}
+            <p className="text-xs text-zinc-500 font-medium">
+              {specs?.osName || 'System Profile'}
             </p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
           <button
             id="toggle-tuning-button"
             onClick={() => setShowTuning(!showTuning)}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border-2 border-black text-black bg-white hover:bg-zinc-100 transition-all shadow-[2px_2px_0px_#000] min-h-[38px]"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border border-zinc-200 text-zinc-800 bg-white hover:bg-zinc-100 transition-all shadow-2xs min-h-[38px]"
           >
             <Sliders className="w-3.5 h-3.5" />
             <span>{showTuning ? 'Done' : 'Adjust RAM'}</span>
@@ -58,7 +58,7 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
             id="rescan-specs-button"
             onClick={() => onRescan()}
             disabled={isLoading}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-black text-white hover:bg-zinc-800 disabled:opacity-50 transition-all border-2 border-black shadow-[2px_2px_0px_#000] min-h-[38px]"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full bg-[#18181b] text-white hover:bg-zinc-800 disabled:opacity-50 transition-all shadow-2xs min-h-[38px]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>{isLoading ? 'Scanning' : 'Re-run Diagnostic'}</span>
@@ -68,10 +68,10 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
 
       {/* Manual RAM Selector Drawer */}
       {showTuning && (
-        <div className="my-4 p-4 rounded-xl bg-amber-100/80 border-2 border-black backdrop-blur-md shadow-[3px_3px_0px_#000]">
+        <div className="my-4 p-4 rounded-2xl bg-[#edf9d5] border border-black/10">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2.5">
-            <span className="text-xs font-bold text-black font-mono">Select Physical RAM</span>
-            <span className="text-[11px] text-zinc-600 font-mono font-semibold">Browsers cap auto-detection at 8 GB</span>
+            <span className="text-xs font-bold text-zinc-900">Select Physical RAM</span>
+            <span className="text-[11px] text-zinc-600 font-medium">Browsers cap auto-detection at 8 GB</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -80,10 +80,10 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
                 key={gb}
                 type="button"
                 onClick={() => setManualRam(gb)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border-2 transition-all min-h-[36px] ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all min-h-[36px] ${
                   manualRam === gb
-                    ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
-                    : 'bg-white text-black border-black hover:bg-zinc-100'
+                    ? 'bg-[#18181b] text-white shadow-xs'
+                    : 'bg-white text-zinc-800 border border-zinc-200 hover:bg-zinc-50'
                 }`}
               >
                 {gb} GB
@@ -92,7 +92,7 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
 
             <button
               onClick={handleApplyCustomRam}
-              className="ml-auto px-4 py-1.5 rounded-lg bg-emerald-400 text-black font-extrabold border-2 border-black text-xs hover:bg-emerald-300 transition-colors shadow-[2px_2px_0px_#000] min-h-[36px]"
+              className="ml-auto px-4 py-1.5 rounded-full bg-[#c7f43a] text-zinc-900 font-extrabold text-xs hover:bg-[#b8e62b] transition-colors shadow-2xs min-h-[36px]"
             >
               Apply
             </button>
@@ -100,61 +100,61 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
         </div>
       )}
 
-      {/* Hardware Metrics Grid - Minimalist Glass Tiles */}
+      {/* Hardware Metrics Grid - Aidora Soft Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3.5 mt-4">
         {/* RAM */}
-        <div className="p-4 rounded-xl bg-white/70 backdrop-blur-md border-2 border-black shadow-[3px_3px_0px_#000]">
-          <div className="flex items-center justify-between text-zinc-500 mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">RAM</span>
-            <HardDrive className="w-4 h-4 text-black" />
+        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">RAM</span>
+            <HardDrive className="w-4 h-4 text-zinc-700" />
           </div>
-          <div className="text-lg sm:text-xl font-black font-mono tracking-tight text-black">
+          <div className="text-lg sm:text-xl font-extrabold font-display tracking-tight text-zinc-900">
             {specs ? `${specs.ramGB} GB` : '—'}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-zinc-600 font-mono font-semibold mt-0.5">
-            {specs?.ramDetected ? 'Hardware' : 'Assigned'}
+          <div className="text-[10px] sm:text-[11px] text-zinc-500 font-medium mt-0.5">
+            {specs?.ramDetected ? 'Hardware detected' : 'Assigned RAM'}
           </div>
         </div>
 
         {/* CPU */}
-        <div className="p-4 rounded-xl bg-white/70 backdrop-blur-md border-2 border-black shadow-[3px_3px_0px_#000]">
-          <div className="flex items-center justify-between text-zinc-500 mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">CPU Cores</span>
-            <Cpu className="w-4 h-4 text-black" />
+        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">CPU Cores</span>
+            <Cpu className="w-4 h-4 text-zinc-700" />
           </div>
-          <div className="text-lg sm:text-xl font-black font-mono tracking-tight text-black">
+          <div className="text-lg sm:text-xl font-extrabold font-display tracking-tight text-zinc-900">
             {specs ? specs.cpuCores : '—'}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-zinc-600 font-mono font-semibold mt-0.5">
-            Threads
+          <div className="text-[10px] sm:text-[11px] text-zinc-500 font-medium mt-0.5">
+            Logical threads
           </div>
         </div>
 
         {/* Acceleration */}
-        <div className="p-4 rounded-xl bg-white/70 backdrop-blur-md border-2 border-black shadow-[3px_3px_0px_#000]">
-          <div className="flex items-center justify-between text-zinc-500 mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">Acceleration</span>
-            <Zap className="w-4 h-4 text-black" />
+        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Acceleration</span>
+            <Zap className="w-4 h-4 text-zinc-700" />
           </div>
-          <div className="text-lg sm:text-xl font-extrabold tracking-tight text-black">
-            {specs?.webGpuAvailable ? 'GPU Hardware' : 'CPU Core'}
+          <div className="text-lg sm:text-xl font-extrabold font-display tracking-tight text-zinc-900">
+            {specs?.webGpuAvailable ? 'GPU Shaders' : 'CPU Core'}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-zinc-400 font-mono mt-0.5 truncate">
+          <div className="text-[10px] sm:text-[11px] text-zinc-500 font-medium mt-0.5 truncate">
             {specs?.webGpuAvailable ? 'Hardware Turbo' : 'Standard CPU'}
           </div>
         </div>
 
         {/* Benchmark Score */}
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white/60 border border-black/[0.05] hover:border-black/20 transition-all">
-          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider">Benchmark</span>
-            <Gauge className="w-3.5 h-3.5 text-zinc-700" />
+        <div className="p-4 rounded-2xl bg-[#edf9d5] border border-black/10">
+          <div className="flex items-center justify-between text-zinc-500 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Benchmark</span>
+            <Gauge className="w-4 h-4 text-zinc-900" />
           </div>
-          <div className="text-lg sm:text-xl font-bold font-mono tracking-tight text-black">
+          <div className="text-lg sm:text-xl font-extrabold font-display tracking-tight text-zinc-900">
             {specs ? `${specs.benchmarkScore}` : '—'}
-            <span className="text-xs text-zinc-400 font-normal"> /100</span>
+            <span className="text-xs text-zinc-500 font-normal"> /100</span>
           </div>
-          <div className="text-[10px] sm:text-[11px] text-zinc-400 font-mono mt-0.5 capitalize truncate">
+          <div className="text-[10px] sm:text-[11px] text-zinc-600 font-medium capitalize truncate">
             {specs?.deviceTier || 'Standard'} Tier
           </div>
         </div>

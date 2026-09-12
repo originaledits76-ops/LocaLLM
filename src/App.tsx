@@ -10,7 +10,10 @@ import {
   Sparkles,
   Sliders,
   RotateCcw,
-  Check
+  Check,
+  Home,
+  Layers,
+  Bot
 } from 'lucide-react';
 import { AVAILABLE_MODELS } from './data/models';
 import {
@@ -23,7 +26,16 @@ import {
   TelemetryPoint
 } from './types';
 import { scanDeviceHardware, evaluateModelRecommendations } from './services/deviceScanner';
-import { getInstalledModelRecords, uninstallModel } from './services/cacheManager';
+import { getInstalledModelRecordsAsync, uninstallModel } from './services/cacheManager';
+import {
+  idbGetAllMessages,
+  idbSaveMessage,
+  idbClearAllMessages,
+  idbGetSettings,
+  idbSaveSettings,
+  idbGetCachedSpecs,
+  idbSaveCachedSpecs
+} from './services/db';
 import {
   installOrLoadModel,
   streamChatCompletion,
@@ -34,8 +46,9 @@ import {
 import { DeviceSpecsCard } from './components/DeviceSpecsCard';
 import { ModelCatalog } from './components/ModelCatalog';
 import { ChatInterface } from './components/ChatInterface';
+import { HomeView } from './components/HomeView';
 
-type AppTab = 'chat' | 'models' | 'hardware' | 'settings';
+type AppTab = 'home' | 'chat' | 'models' | 'hardware' | 'settings';
 
 export default function App() {
   // Device Specs State
@@ -43,8 +56,8 @@ export default function App() {
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [recommendations, setRecommendations] = useState<ModelRecommendation[]>([]);
 
-  // Navigation State: bottom nav with 'chat' | 'models' | 'hardware' | 'settings'
-  const [activeTab, setActiveTab] = useState<AppTab>('models');
+  // Navigation State: bottom nav with 'home' | 'chat' | 'models' | 'hardware' | 'settings'
+  const [activeTab, setActiveTab] = useState<AppTab>('home');
 
   // Runtime Models State
   const [activeModelId, setActiveModelId] = useState<string | null>(null);
@@ -91,17 +104,22 @@ export default function App() {
     try {
       const detected = await scanDeviceHardware(customRam);
       setSpecs(detected);
+      await idbSaveCachedSpecs(detected);
 
       // Auto-enable WebGPU when hardware support is detected on device
       if (detected.webGpuAvailable) {
-        setSettings((s) => ({ ...s, preferWebGpu: true }));
+        setSettings((s) => {
+          const updated = { ...s, preferWebGpu: true };
+          idbSaveSettings(updated);
+          return updated;
+        });
       }
 
       const recs = evaluateModelRecommendations(detected, AVAILABLE_MODELS);
       setRecommendations(recs);
 
-      // Check previously installed models in local storage cache
-      const cachedRecords = getInstalledModelRecords();
+      // Check previously installed models in IndexedDB & local storage cache
+      const cachedRecords = await getInstalledModelRecordsAsync();
       const initialRuntimeStates: Record<string, ModelRuntimeState> = {};
 
       AVAILABLE_MODELS.forEach((m) => {
@@ -130,10 +148,14 @@ export default function App() {
       setActiveModelId((curr) => {
         if (!curr && recs.length > 0) {
           const bestPick = recs.find((r) => r.isBestPick) || recs[0];
-          setSettings((s) => ({
-            ...s,
-            systemPrompt: bestPick.model.systemPromptDefault
-          }));
+          setSettings((s) => {
+            const updated = {
+              ...s,
+              systemPrompt: bestPick.model.systemPromptDefault
+            };
+            idbSaveSettings(updated);
+            return updated;
+          });
           return bestPick.model.id;
         }
         return curr;
@@ -143,10 +165,34 @@ export default function App() {
     } finally {
       setIsScanning(false);
     }
-  }, []); // Run only on initial mount or manual rescan
+  }, []);
 
+  // Initial load from IndexedDB
   useEffect(() => {
-    performHardwareScan();
+    async function loadIndexedDbState() {
+      // 1. Restore messages
+      const savedMsgs = await idbGetAllMessages();
+      if (savedMsgs && savedMsgs.length > 0) {
+        setMessages(savedMsgs);
+      }
+
+      // 2. Restore settings
+      const savedSet = await idbGetSettings();
+      if (savedSet) {
+        setSettings(savedSet);
+      }
+
+      // 3. Restore cached specs if available
+      const cachedSpecs = await idbGetCachedSpecs();
+      if (cachedSpecs) {
+        setSpecs(cachedSpecs);
+        setRecommendations(evaluateModelRecommendations(cachedSpecs, AVAILABLE_MODELS));
+        setIsScanning(false);
+      } else {
+        performHardwareScan();
+      }
+    }
+    loadIndexedDbState();
   }, [performHardwareScan]);
 
   const activeModel = AVAILABLE_MODELS.find((m) => m.id === activeModelId) || null;
@@ -346,6 +392,8 @@ export default function App() {
 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    await idbSaveMessage(userMessage);
+
     setIsGenerating(true);
     setStreamingContent('');
     setStreamingMetrics({});
@@ -401,6 +449,7 @@ export default function App() {
       };
 
       setMessages([...newMessages, assistantMessage]);
+      await idbSaveMessage(assistantMessage);
     } catch (err: any) {
       console.error('Inference error:', err);
       const errorMessage: ChatMessage = {
@@ -411,6 +460,7 @@ export default function App() {
         modelId: activeModelId
       };
       setMessages([...newMessages, errorMessage]);
+      await idbSaveMessage(errorMessage);
     } finally {
       setIsGenerating(false);
       setStreamingContent('');
@@ -422,104 +472,64 @@ export default function App() {
     setIsGenerating(false);
   };
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
     setMessages([]);
     setStreamingContent('');
     setLiveTelemetry([]);
     setStreamingMetrics({});
+    await idbClearAllMessages();
   };
 
   return (
-    <div className="min-h-[100dvh] brutalist-bg text-black flex flex-col font-sans antialiased selection:bg-amber-300 selection:text-black relative">
-      {/* Top Neubrutalist Header Navigation */}
-      <header className="sticky top-0 z-40 brutalist-header px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 shadow-[0_2px_0_0_#000]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_#000] shrink-0">
-            <Sparkles className="w-5 h-5 text-amber-300" />
-          </div>
-          <div className="hidden xs:block">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black tracking-tight text-black font-display uppercase">
-                POCKET LOCAL AI
-              </span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-400 text-black border border-black shadow-[1px_1px_0px_0px_#000]">
-                PRIVATE
+    <div className="min-h-screen min-h-[100dvh] flex flex-col aidora-bg text-zinc-900 font-sans selection:bg-[#c7f43a] selection:text-black relative">
+      {/* Top Aidora Sub-Header for Non-Chat Views */}
+      {activeTab !== 'chat' && activeTab !== 'home' && (
+        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-zinc-200/50 px-4 sm:px-6 py-3">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveTab('home')}>
+              <div className="w-9 h-9 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center font-bold text-xs shadow-2xs">
+                <Bot className="w-5 h-5" />
+              </div>
+              <span className="font-display font-extrabold text-lg text-zinc-900 tracking-tight">
+                Aidora
               </span>
             </div>
-          </div>
-        </div>
 
-        {/* Top Header Navigation Tabs */}
-        <nav className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-0.5 scrollbar-none">
-          <button
-            id="nav-models"
-            onClick={() => setActiveTab('models')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black ${
-              activeTab === 'models'
-                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
-                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Models</span>
-          </button>
-
-          <button
-            id="nav-chat"
-            onClick={() => setActiveTab('chat')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black relative ${
-              activeTab === 'chat'
-                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
-                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>Chat</span>
-            {installedModels.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black" />
+            {activeModel && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs font-semibold text-zinc-800 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="truncate max-w-[160px]">{activeModel.name}</span>
+              </div>
             )}
-          </button>
-
-          <button
-            id="nav-hardware"
-            onClick={() => setActiveTab('hardware')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black ${
-              activeTab === 'hardware'
-                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
-                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Hardware</span>
-          </button>
-
-          <button
-            id="nav-settings"
-            onClick={() => setActiveTab('settings')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border-2 border-black ${
-              activeTab === 'settings'
-                ? 'bg-black text-white shadow-[2px_2px_0px_0px_#000]'
-                : 'bg-white text-black hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#000]'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
-        </nav>
-      </header>
+          </div>
+        </header>
+      )}
 
       {/* Floating Status Toast */}
       {toastNotice && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 brutalist-card px-4 py-2 text-xs font-bold text-black shadow-[4px_4px_0px_0px_#000] flex items-center gap-2 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-top-2 duration-150">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black animate-ping shrink-0" />
-          <span className="truncate font-mono">{toastNotice}</span>
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#18181b] text-white px-4 py-2.5 rounded-full text-xs font-bold shadow-xl flex items-center gap-2 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-top-2 duration-150 border border-zinc-700">
+          <span className="w-2 h-2 rounded-full bg-[#c7f43a] animate-ping shrink-0" />
+          <span className="truncate">{toastNotice}</span>
         </div>
       )}
 
       {/* Main View Area */}
-      {activeTab === 'chat' ? (
-        /* Full View Chat Interface - No Bottom Bar Blocking Input */
-        <div className="flex-1 w-full flex flex-col overflow-hidden h-[calc(100dvh-57px)]">
+      {activeTab === 'home' ? (
+        <HomeView
+          activeModel={activeModel}
+          installedModels={installedModels}
+          onStartNewChat={(prompt) => {
+            if (prompt) {
+              handleSendMessage(prompt);
+            }
+            setActiveTab('chat');
+          }}
+          onNavigateToModels={() => setActiveTab('models')}
+          onNavigateToHardware={() => setActiveTab('hardware')}
+        />
+      ) : activeTab === 'chat' ? (
+        /* Full View Chat Interface */
+        <div className="flex-1 w-full flex flex-col overflow-hidden h-[calc(100dvh)]">
           <ChatInterface
             activeModel={activeModel}
             installedModels={installedModels}
@@ -539,7 +549,7 @@ export default function App() {
         </div>
       ) : (
         /* Content for Models, Hardware, and Settings tabs */
-        <div className="flex-1 w-full max-w-5xl mx-auto px-3.5 sm:px-6 py-6 pb-12">
+        <div className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24">
           {activeTab === 'models' && (
             <div className="space-y-6">
               <ModelCatalog
@@ -566,29 +576,33 @@ export default function App() {
 
           {activeTab === 'settings' && (
             <div className="space-y-4 max-w-xl mx-auto">
-              <div className="brutalist-card p-5 sm:p-6 space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b-2 border-black">
+              <div className="aidora-card-white p-6 space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
                   <div>
-                    <h2 className="text-lg font-black text-black tracking-tight font-display">
+                    <h2 className="text-lg font-extrabold text-zinc-900 tracking-tight font-display">
                       INFERENCE CONFIGURATION
                     </h2>
-                    <p className="text-xs text-zinc-600 font-medium">
-                      Configure parameters and hardware acceleration
+                    <p className="text-xs text-zinc-500 font-medium">
+                      Parameters &amp; Hardware Acceleration
                     </p>
                   </div>
                   <button
                     onClick={() => {
-                      setSettings({
-                        temperature: 0.7,
-                        maxTokens: 256,
+                      const newSet: InferenceSettings = {
+                        temperature: 0.6,
+                        maxTokens: 2048,
                         topP: 0.9,
-                        systemPrompt: activeModel?.systemPromptDefault || 'You are a helpful assistant.',
-                        preferWebGpu: false
-                      });
+                        topK: 40,
+                        fastMode: true,
+                        systemPrompt: activeModel?.systemPromptDefault || 'You are a helpful and concise AI assistant running locally on-device in the browser.',
+                        preferWebGpu: specs?.webGpuAvailable ?? true
+                      };
+                      setSettings(newSet);
+                      idbSaveSettings(newSet);
                       setSavedNotice(true);
                       setTimeout(() => setSavedNotice(false), 2000);
                     }}
-                    className="inline-flex items-center gap-1 text-xs text-black font-bold brutalist-pill px-2.5 py-1 bg-amber-300 hover:bg-amber-400"
+                    className="inline-flex items-center gap-1 text-xs text-zinc-800 font-bold px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Reset</span>
@@ -599,8 +613,8 @@ export default function App() {
                   {/* Temperature */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center font-bold">
-                      <span className="text-black uppercase tracking-wider">Temperature</span>
-                      <span className="font-mono bg-zinc-100 px-2 py-0.5 rounded border border-black">{settings.temperature.toFixed(2)}</span>
+                      <span className="text-zinc-800 uppercase tracking-wider">Temperature</span>
+                      <span className="font-mono bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200">{settings.temperature.toFixed(2)}</span>
                     </div>
                     <input
                       type="range"
@@ -608,10 +622,17 @@ export default function App() {
                       max={1.5}
                       step={0.05}
                       value={settings.temperature}
-                      onChange={(e) => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
-                      className="w-full accent-black cursor-pointer h-2"
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setSettings((s) => {
+                          const updated = { ...s, temperature: val };
+                          idbSaveSettings(updated);
+                          return updated;
+                        });
+                      }}
+                      className="w-full accent-[#18181b] cursor-pointer h-2"
                     />
-                    <div className="flex justify-between text-[10px] text-zinc-500 font-mono font-semibold">
+                    <div className="flex justify-between text-[10px] text-zinc-400 font-mono font-semibold">
                       <span>Focused (0.0)</span>
                       <span>Creative (1.5)</span>
                     </div>
@@ -620,48 +641,69 @@ export default function App() {
                   {/* Max Tokens */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center font-bold">
-                      <span className="text-black uppercase tracking-wider">Max Output Tokens</span>
-                      <span className="font-mono bg-zinc-100 px-2 py-0.5 rounded border border-black">{settings.maxTokens}</span>
+                      <span className="text-zinc-800 uppercase tracking-wider">Max Output Tokens</span>
+                      <span className="font-mono bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200">{settings.maxTokens}</span>
                     </div>
                     <input
                       type="range"
                       min={64}
-                      max={1024}
+                      max={2048}
                       step={32}
                       value={settings.maxTokens}
-                      onChange={(e) => setSettings({ ...settings, maxTokens: parseInt(e.target.value, 10) })}
-                      className="w-full accent-black cursor-pointer h-2"
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setSettings((s) => {
+                          const updated = { ...s, maxTokens: val };
+                          idbSaveSettings(updated);
+                          return updated;
+                        });
+                      }}
+                      className="w-full accent-[#18181b] cursor-pointer h-2"
                     />
                   </div>
 
                   {/* Prefer WebGPU */}
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-100/60 border-2 border-black shadow-[3px_3px_0px_0px_#000]">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-[#edf9d5] border border-black/10">
                     <div>
-                      <p className="font-bold text-black uppercase tracking-wider text-xs">Hardware GPU Acceleration</p>
-                      <p className="text-[11px] text-zinc-700 font-medium">Uses GPU hardware acceleration when supported</p>
+                      <p className="font-bold text-zinc-900 uppercase tracking-wider text-xs">Hardware GPU Acceleration</p>
+                      <p className="text-[11px] text-zinc-600 font-medium font-sans">Uses GPU shaders for fast local token streaming</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={settings.preferWebGpu}
-                      onChange={(e) => setSettings({ ...settings, preferWebGpu: e.target.checked })}
-                      className="w-5 h-5 accent-black cursor-pointer rounded shrink-0 border-2 border-black"
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setSettings((s) => {
+                          const updated = { ...s, preferWebGpu: val };
+                          idbSaveSettings(updated);
+                          return updated;
+                        });
+                      }}
+                      className="w-5 h-5 accent-[#18181b] cursor-pointer rounded shrink-0"
                     />
                   </div>
 
                   {/* System Prompt */}
                   <div className="space-y-2">
-                    <span className="font-bold text-black uppercase tracking-wider block">System Instructions</span>
+                    <span className="font-bold text-zinc-800 uppercase tracking-wider block">System Instructions</span>
                     <textarea
                       rows={3}
                       value={settings.systemPrompt}
-                      onChange={(e) => setSettings({ ...settings, systemPrompt: e.target.value })}
-                      className="w-full p-3 rounded-xl border-2 border-black bg-white text-xs text-black focus:outline-none font-mono leading-relaxed resize-none shadow-[3px_3px_0px_0px_#000]"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSettings((s) => {
+                          const updated = { ...s, systemPrompt: val };
+                          idbSaveSettings(updated);
+                          return updated;
+                        });
+                      }}
+                      className="w-full p-3 rounded-2xl border border-zinc-200 bg-white text-xs text-zinc-900 focus:outline-none font-mono leading-relaxed resize-none shadow-2xs"
                     />
                   </div>
                 </div>
 
                 {savedNotice && (
-                  <div className="p-3 rounded-xl bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_#000]">
+                  <div className="p-3 rounded-2xl bg-[#c7f43a] text-zinc-900 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs">
                     <Check className="w-4 h-4" />
                     <span>Settings reset to defaults!</span>
                   </div>
@@ -669,6 +711,77 @@ export default function App() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Aidora Floating Bottom Navigation Dock (Exact Match to Aidora Mockup Dock) */}
+      {activeTab !== 'chat' && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+          <nav className="aidora-nav-dock px-3 py-2 flex items-center gap-2 shadow-xl">
+            {/* Home Tab */}
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                activeTab === 'home'
+                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
+              title="Home"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+
+            {/* Chat Tab */}
+            <button
+              onClick={() => setActiveTab('chat')}
+              className="p-2.5 rounded-full transition-all cursor-pointer relative text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+              title="Chat AI"
+            >
+              <MessageSquare className="w-5 h-5" />
+              {installedModels.length > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#c7f43a] ring-2 ring-white" />
+              )}
+            </button>
+
+            {/* Models Catalog Tab */}
+            <button
+              onClick={() => setActiveTab('models')}
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                activeTab === 'models'
+                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
+              title="Models Hub"
+            >
+              <Layers className="w-5 h-5" />
+            </button>
+
+            {/* Hardware Tab */}
+            <button
+              onClick={() => setActiveTab('hardware')}
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                activeTab === 'hardware'
+                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
+              title="Hardware Diagnostics"
+            >
+              <Cpu className="w-5 h-5" />
+            </button>
+
+            {/* Settings Tab */}
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
+              title="Settings"
+            >
+              <Sliders className="w-5 h-5" />
+            </button>
+          </nav>
         </div>
       )}
     </div>

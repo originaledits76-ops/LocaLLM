@@ -48,54 +48,54 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
   return (
     <div className="space-y-4">
       {/* Filter Bar Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 brutalist-card p-3.5 sm:p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 aidora-card-white p-4 sm:p-5">
         <div>
-          <h2 className="text-base font-black tracking-tight text-black font-display uppercase">
-            Model Selection Hub
+          <h2 className="text-base font-extrabold text-zinc-900 font-display tracking-tight">
+            Local Models Hub
           </h2>
-          <p className="text-xs text-zinc-600 font-medium">
-            Open-weight models optimized for private on-device WebGPU / WASM execution
+          <p className="text-xs text-zinc-500 font-medium">
+            Open-weight AI models running 100% on-device via WebGPU
           </p>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/60 backdrop-blur-md border-2 border-black w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-zinc-100 border border-zinc-200/60 w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
           <button
             onClick={() => setFilter('recommended')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
+            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'recommended'
-                ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
-                : 'text-black border-transparent hover:bg-black/5'
+                ? 'bg-[#18181b] text-white shadow-xs'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
             }`}
           >
             Recommended
           </button>
           <button
             onClick={() => setFilter('modest')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
+            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'modest'
-                ? 'bg-amber-400 text-black border-black shadow-[2px_2px_0px_#000]'
-                : 'text-amber-900 border-transparent hover:bg-amber-100/50'
+                ? 'bg-[#e2f779] text-zinc-900 shadow-xs'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
             }`}
           >
             ⚡ Fast 2 &amp; 3-Bit
           </button>
           <button
             onClick={() => setFilter('all')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
+            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'all'
-                ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
-                : 'text-black border-transparent hover:bg-black/5'
+                ? 'bg-[#18181b] text-white shadow-xs'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
             }`}
           >
             All Models
           </button>
           <button
             onClick={() => setFilter('installed')}
-            className={`flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap border ${
+            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
               filter === 'installed'
-                ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000]'
-                : 'text-black border-transparent hover:bg-black/5'
+                ? 'bg-[#18181b] text-white shadow-xs'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
             }`}
           >
             Installed
@@ -104,7 +104,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
       </div>
 
       {/* Model Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
         {filteredRecommendations.map((rec) => {
           const { model, level, isBestPick } = rec;
           const runtime = runtimeStates[model.id] || {
@@ -123,9 +123,9 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
             <div
               key={model.id}
               id={`model-card-${model.id.replace(/[^a-zA-Z0-9]/g, '-')}`}
-              className={`brutalist-card-interactive p-5 flex flex-col justify-between ${
+              className={`aidora-card-interactive p-5 flex flex-col justify-between ${
                 isActive
-                  ? 'bg-emerald-100/70 border-2 border-black shadow-[6px_6px_0px_#000]'
+                  ? 'bg-[#edf9d5] border-2 border-[#18181b] shadow-md'
                   : ''
               }`}
             >

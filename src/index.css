@@ -2,14 +2,14 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  --font-display: "Syne", "Plus Jakarta Sans", sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
 html, body {
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  background-color: #f6f5f0;
-  color: #0f0f0f;
+  background-color: #edf3e2;
+  color: #18181b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100%;
@@ -19,49 +19,120 @@ html, body {
 }
 
 .font-display {
-  font-family: "Syne", "Plus Jakarta Sans", sans-serif;
+  font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
 }
 
-/* Glassmorphism & Neubrutalism Fusion Theme */
-.brutalist-bg {
-  background-color: #f4f3ed;
+/* Aidora Soft Lime/Pistachio Theme Background */
+.aidora-bg {
+  background-color: #edf3e2;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(253, 230, 138, 0.4) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(167, 243, 208, 0.45) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(199, 210, 254, 0.45) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(254, 205, 211, 0.4) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(226, 247, 121, 0.45) 0px, transparent 60%),
+    radial-gradient(at 100% 0%, rgba(210, 241, 247, 0.5) 0px, transparent 60%),
+    radial-gradient(at 100% 100%, rgba(240, 250, 190, 0.4) 0px, transparent 60%),
+    radial-gradient(at 0% 100%, rgba(230, 245, 200, 0.5) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
-/* Glassmorphic Cards & Containers with Crisp Borders */
+/* Aidora Cards & Elements */
+.aidora-card-white {
+  background: #ffffff;
+  border-radius: 28px;
+  border: 1px solid rgba(24, 24, 27, 0.06);
+  box-shadow: 0 4px 20px -2px rgba(24, 24, 27, 0.04), 0 2px 6px -1px rgba(24, 24, 27, 0.02);
+}
+
+.aidora-card-lime {
+  background: #e2f779;
+  border-radius: 28px;
+  color: #18181b;
+  box-shadow: 0 4px 20px -2px rgba(226, 247, 121, 0.4);
+}
+
+.aidora-card-cyan {
+  background: #d2f1f7;
+  border-radius: 28px;
+  color: #18181b;
+  box-shadow: 0 4px 20px -2px rgba(210, 241, 247, 0.4);
+}
+
+.aidora-card-interactive {
+  background: #ffffff;
+  border-radius: 28px;
+  border: 1px solid rgba(24, 24, 27, 0.06);
+  box-shadow: 0 4px 20px -2px rgba(24, 24, 27, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aidora-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -4px rgba(24, 24, 27, 0.08);
+}
+
+.aidora-pill-action {
+  background: #18181b;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 0.875rem 1.25rem;
+  box-shadow: 0 8px 24px -4px rgba(24, 24, 27, 0.25);
+  transition: all 0.2s ease;
+}
+
+.aidora-pill-action:hover {
+  background: #27272a;
+  transform: translateY(-1px);
+}
+
+.aidora-lime-btn {
+  background-color: #c7f43a;
+  color: #18181b;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aidora-lime-btn:hover {
+  transform: scale(1.05);
+  background-color: #bbf028;
+}
+
+.aidora-lime-btn:active {
+  transform: scale(0.95);
+}
+
+.aidora-nav-dock {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 36px -4px rgba(24, 24, 27, 0.08), 0 4px 12px -2px rgba(24, 24, 27, 0.04);
+  border-radius: 9999px;
+}
+
+/* Backwards compatibility helper classes */
 .glass-card, .brutalist-card {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 2px solid #000000;
-  box-shadow: 4px 4px 0px 0px #000000, inset 0px 1px 1px 0px rgba(255, 255, 255, 0.9);
-  border-radius: 18px;
+  background: #ffffff;
+  border-radius: 28px;
+  border: 1px solid rgba(24, 24, 27, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(24, 24, 27, 0.04);
 }
 
 .glass-card-interactive, .brutalist-card-interactive {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 2px solid #000000;
-  box-shadow: 4px 4px 0px 0px #000000, inset 0px 1px 1px 0px rgba(255, 255, 255, 0.9);
-  border-radius: 18px;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #ffffff;
+  border-radius: 28px;
+  border: 1px solid rgba(24, 24, 27, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(24, 24, 27, 0.04);
+  transition: all 0.2s ease;
 }
 
 .glass-card-interactive:hover, .brutalist-card-interactive:hover {
-  background: rgba(255, 255, 255, 0.92);
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px #000000, inset 0px 1px 1px 0px rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -4px rgba(24, 24, 27, 0.08);
 }
 
-.glass-card-interactive:active, .brutalist-card-interactive:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px 0px #000000;
+.brutalist-header {
+  background: rgba(237, 243, 226, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(24, 24, 27, 0.06);
 }
 
 .brutalist-pill {
