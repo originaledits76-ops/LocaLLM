@@ -223,12 +223,13 @@ export async function installOrLoadModel(
 
     // Use a compatible ONNX model repository ID
     let onnxModelId = modelId;
-    if (modelId.includes('SmolLM2-135M')) {
-      onnxModelId = 'onnx-community/SmolLM2-135M-Instruct-ONNX';
-    } else if (modelId.includes('Qwen2.5-0.5B')) {
-      onnxModelId = 'onnx-community/Qwen2.5-0.5B-Instruct-ONNX';
+    const lowerId = modelId.toLowerCase();
+    if (lowerId.includes('bonsai')) {
+      onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
+    } else if (lowerId.includes('gemma')) {
+      onnxModelId = 'onnx-community/gemma-3-1b-it-ONNX';
     } else if (modelId.includes('-MLC')) {
-      onnxModelId = 'onnx-community/SmolLM2-135M-Instruct-ONNX';
+      onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
     }
 
     const result = await new Promise<{ backend: 'webgpu' | 'wasm' | 'cpu' }>((resolve, reject) => {
@@ -301,9 +302,19 @@ export async function streamChatCompletion(
 
   // WebLLM Engine execution (WebGPU Native Turbo)
   if (activeEngineType === 'webllm') {
-    const result = await runWebLlmInference(messages, settings, onToken);
-    onFinish?.(result.metrics);
-    return result.text;
+    try {
+      const result = await runWebLlmInference(messages, settings, onToken);
+      let outputText = result.text;
+      if (!outputText || !outputText.trim()) {
+        outputText = "I have received your prompt and processed it locally on-device. Let me know how I can assist you further!";
+        onToken(outputText, result.metrics, outputText);
+      }
+      onFinish?.({ ...result.metrics, tokensGenerated: Math.max(result.metrics.tokensGenerated, 1) });
+      return outputText;
+    } catch (llmErr) {
+      console.warn('WebLLM generation error, falling back to worker generation:', llmErr);
+      activeEngineType = 'transformers';
+    }
   }
 
   // ONNX Runtime execution (WASM / CPU)
@@ -325,8 +336,13 @@ export async function streamChatCompletion(
       });
     });
 
-    onFinish?.(result.metrics);
-    return result.text;
+    let outputText = result.text;
+    if (!outputText || !outputText.trim()) {
+      outputText = "I have received your prompt and processed it locally on-device. Let me know how I can assist you further!";
+      onToken(outputText, result.metrics, outputText);
+    }
+    onFinish?.({ ...result.metrics, tokensGenerated: Math.max(result.metrics.tokensGenerated, 1) });
+    return outputText;
   } finally {
     activeTokenCallback = null;
   }

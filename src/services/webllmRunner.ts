@@ -182,6 +182,40 @@ export async function loadWebLlmModel(
   }
 }
 
+// Helper to detect degenerate repetition loops (hallucinating same words/phrases)
+function hasRepetitionLoop(text: string): boolean {
+  if (text.length < 40) return false;
+  
+  // 1. Check repeated phrases / word sequences (3 to 6 words)
+  const words = text.trim().split(/\s+/);
+  if (words.length >= 9) {
+    for (const phraseLen of [3, 4, 5, 6]) {
+      if (words.length >= phraseLen * 3) {
+        const p1 = words.slice(-phraseLen).join(' ').toLowerCase();
+        const p2 = words.slice(-phraseLen * 2, -phraseLen).join(' ').toLowerCase();
+        const p3 = words.slice(-phraseLen * 3, -phraseLen * 2).join(' ').toLowerCase();
+        if (p1 === p2 && p2 === p3 && p1.length > 8) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Check repeated substring patterns (10 to 40 characters)
+  for (let len = 10; len <= 40; len++) {
+    if (text.length >= len * 3) {
+      const s1 = text.slice(-len);
+      const s2 = text.slice(-len * 2, -len);
+      const s3 = text.slice(-len * 3, -len * 2);
+      if (s1 === s2 && s2 === s3) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /**
  * Runs streaming text generation using WebLLM
  */
@@ -229,12 +263,19 @@ export async function runWebLlmInference(
     }
   }
 
+  // Use calibrated temperature (>= 0.35) and repetition_penalty to avoid infinite loops and hallucinations
+  const effectiveTemp = settings.fastMode
+    ? 0.45
+    : Math.max(0.35, Math.min(settings.temperature, 1.1));
+
   const completion = await webLlmEngine.chat.completions.create({
     messages: chatMessages,
-    temperature: settings.fastMode ? 0.0 : Math.max(0.1, Math.min(settings.temperature, 1.2)),
-    top_p: settings.fastMode ? 1.0 : (settings.topP || 0.9),
+    temperature: effectiveTemp,
+    top_p: settings.fastMode ? 0.95 : (settings.topP || 0.9),
     max_tokens: settings.maxTokens && settings.maxTokens > 0 ? settings.maxTokens : 2048,
-    repetition_penalty: 1.0,
+    repetition_penalty: 1.18,
+    frequency_penalty: 0.15,
+    presence_penalty: 0.1,
     stream: true
   });
 
@@ -249,6 +290,17 @@ export async function runWebLlmInference(
 
     tokenCount++;
     fullAccumulatedText += delta;
+
+    // Guard against runaway repetition loops in low-bit quantized models
+    if (hasRepetitionLoop(fullAccumulatedText)) {
+      console.warn('Repetition loop detected in stream, safely terminating generation.');
+      // Clean up the repeating tail
+      const words = fullAccumulatedText.trim().split(/\s+/);
+      if (words.length > 6) {
+        fullAccumulatedText = words.slice(0, -4).join(' ') + '.';
+      }
+      break;
+    }
 
     const interTokenLatency = now - lastTokenTimestamp;
     lastTokenTimestamp = now;

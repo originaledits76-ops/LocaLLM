@@ -32,8 +32,45 @@ const STOP_SEQUENCES = [
   '<|eot_id|>',
   '<|end_of_text|>',
   '</s>',
-  '<end_of_turn>'
+  '<end_of_turn>',
+  '<start_of_turn>',
+  '<|im_start|>',
+  '<eos>'
 ];
+
+// Helper to detect degenerate repetition loops (hallucinating same words/phrases)
+function hasRepetitionLoop(text: string): boolean {
+  if (text.length < 40) return false;
+  
+  // 1. Check repeated phrases / word sequences (3 to 6 words)
+  const words = text.trim().split(/\s+/);
+  if (words.length >= 9) {
+    for (const phraseLen of [3, 4, 5, 6]) {
+      if (words.length >= phraseLen * 3) {
+        const p1 = words.slice(-phraseLen).join(' ').toLowerCase();
+        const p2 = words.slice(-phraseLen * 2, -phraseLen).join(' ').toLowerCase();
+        const p3 = words.slice(-phraseLen * 3, -phraseLen * 2).join(' ').toLowerCase();
+        if (p1 === p2 && p2 === p3 && p1.length > 8) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Check repeated substring patterns (10 to 40 characters)
+  for (let len = 10; len <= 40; len++) {
+    if (text.length >= len * 3) {
+      const s1 = text.slice(-len);
+      const s2 = text.slice(-len * 2, -len);
+      const s3 = text.slice(-len * 3, -len * 2);
+      if (s1 === s2 && s2 === s3) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 function cleanStopSequences(text: string): { cleaned: string; hasStop: boolean } {
   let cleaned = text;
@@ -55,13 +92,6 @@ function formatPrompt(
 ): string {
   const fullMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
 
-  if (systemPrompt && systemPrompt.trim()) {
-    fullMessages.push({
-      role: 'system',
-      content: systemPrompt.trim()
-    });
-  }
-
   // Preserve multi-turn conversation context history up to 24 turns
   const maxTurns = 24;
   const recentMessages = messages.length > maxTurns 
@@ -77,11 +107,39 @@ function formatPrompt(
     }
   }
 
-  // Check if tokenizer supports apply_chat_template
+  const lowerId = modelId.toLowerCase();
+
+  // Gemma 3 & Gemma 2 format:
+  // Note: Gemma does not support a separate system role. System instructions are prepended to the first user turn.
+  if (lowerId.includes('gemma')) {
+    let prompt = '';
+    let isFirstUser = true;
+    for (const m of fullMessages) {
+      if (m.role === 'user') {
+        const text = (isFirstUser && systemPrompt && systemPrompt.trim())
+          ? `${systemPrompt.trim()}\n\n${m.content}`
+          : m.content;
+        prompt += `<start_of_turn>user\n${text}<end_of_turn>\n`;
+        isFirstUser = false;
+      } else if (m.role === 'assistant') {
+        prompt += `<start_of_turn>model\n${m.content}<end_of_turn>\n`;
+      }
+    }
+    if (isFirstUser && systemPrompt && systemPrompt.trim()) {
+      prompt += `<start_of_turn>user\n${systemPrompt.trim()}<end_of_turn>\n`;
+    }
+    prompt += '<start_of_turn>model\n';
+    return prompt;
+  }
+
+  // Check if tokenizer supports apply_chat_template for other models
   const tokenizer = activeGenerator?.tokenizer;
   if (tokenizer && typeof tokenizer.apply_chat_template === 'function') {
     try {
-      const templated = tokenizer.apply_chat_template(fullMessages, {
+      const chatInput = systemPrompt && systemPrompt.trim() 
+        ? [{ role: 'system', content: systemPrompt.trim() }, ...fullMessages]
+        : fullMessages;
+      const templated = tokenizer.apply_chat_template(chatInput, {
         tokenize: false,
         add_generation_prompt: true
       });
@@ -93,32 +151,11 @@ function formatPrompt(
     }
   }
 
-  // Model-specific fallback formatting
-  const lowerId = modelId.toLowerCase();
-
-  if (lowerId.includes('llama')) {
-    // Llama-3 format
-    let prompt = '<|begin_of_text|>';
-    for (const m of fullMessages) {
-      prompt += `<|start_header_id|>${m.role}<|end_header_id|>\n\n${m.content}<|eot_id|>`;
-    }
-    prompt += '<|start_header_id|>assistant<|end_header_id|>\n\n';
-    return prompt;
-  }
-
-  if (lowerId.includes('gemma')) {
-    // Gemma format
-    let prompt = '';
-    for (const m of fullMessages) {
-      const role = m.role === 'assistant' ? 'model' : m.role === 'system' ? 'user' : m.role;
-      prompt += `<start_of_turn>${role}\n${m.content}<end_of_turn>\n`;
-    }
-    prompt += '<start_of_turn>model\n';
-    return prompt;
-  }
-
-  // Standard ChatML format (SmolLM2, Qwen2.5, DeepSeek, etc.)
+  // Standard ChatML format (Bonsai 1.7B, Qwen, etc.)
   let prompt = '';
+  if (systemPrompt && systemPrompt.trim()) {
+    prompt += `<|im_start|>system\n${systemPrompt.trim()}<|im_end|>\n`;
+  }
   for (const m of fullMessages) {
     prompt += `<|im_start|>${m.role}\n${m.content}<|im_end|>\n`;
   }
@@ -475,6 +512,13 @@ self.onmessage = async (event: MessageEvent) => {
             isAborted = true;
           }
 
+          // Guard against runaway hallucinated repetition loops
+          if (hasRepetitionLoop(accumulatedRaw)) {
+            console.warn('Repetition loop detected in worker stream, terminating early.');
+            stoppedEarly = true;
+            isAborted = true;
+          }
+
           self.postMessage({
             type: 'TOKEN_STREAM',
             payload: {
@@ -507,7 +551,8 @@ self.onmessage = async (event: MessageEvent) => {
         // Optimized decoding configuration:
         // 1. use_cache: true leverages past_key_values tensor caching for O(1) step computation
         // 2. num_beams: 1 prevents multi-beam duplication overhead
-        // 3. do_sample: false when temperature <= 0.1 or in fast greedy mode for 3-5x faster decoding
+        // 3. repetition_penalty: 1.18 prevents repetitive loops on low-bit models
+        // 4. do_sample: false when temperature <= 0.1 or in fast mode
         const doSample = !isFastMode && temperature > 0.15;
 
         const generationOptions: any = {
@@ -515,6 +560,8 @@ self.onmessage = async (event: MessageEvent) => {
           use_cache: true,
           num_beams: 1,
           return_full_text: false,
+          repetition_penalty: 1.18,
+          no_repeat_ngram_size: 4,
           streamer
         };
 

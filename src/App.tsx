@@ -61,9 +61,16 @@ export default function App() {
 
   // Runtime Models State
   const [activeModelId, setActiveModelId] = useState<string | null>(
-    AVAILABLE_MODELS[0]?.id || 'SmolLM2-135M-Instruct-2Bit-ONNX'
+    AVAILABLE_MODELS[0]?.id || 'bonsai-1.7b-2bit'
   );
   const [runtimeStates, setRuntimeStates] = useState<Record<string, ModelRuntimeState>>({});
+
+  // Auto-heal activeModelId if set to a decommissioned model
+  useEffect(() => {
+    if (!activeModelId || !AVAILABLE_MODELS.some((m) => m.id === activeModelId)) {
+      setActiveModelId(AVAILABLE_MODELS[0]?.id || 'bonsai-1.7b-2bit');
+    }
+  }, [activeModelId]);
 
   // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
