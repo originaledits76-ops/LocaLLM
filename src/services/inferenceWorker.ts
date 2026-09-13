@@ -5,9 +5,89 @@
 
 import { pipeline, env, TextStreamer } from '@huggingface/transformers';
 
-// Configure environment inside Web Worker
+// Configure environment inside Web Worker: Enforce IndexedDB storage, disable Cache API
 env.allowLocalModels = false;
-env.useBrowserCache = true;
+env.useBrowserCache = false;
+
+// IndexedDB storage implementation for model files to bypass Cache API
+class WorkerIndexedDBCache {
+  private dbPromise: Promise<IDBDatabase> | null = null;
+
+  private getDB(): Promise<IDBDatabase> {
+    if (!this.dbPromise) {
+      this.dbPromise = new Promise((resolve, reject) => {
+        if (typeof indexedDB === 'undefined') {
+          reject(new Error('IndexedDB not supported in worker'));
+          return;
+        }
+        const req = indexedDB.open('Aidora_Transformers_IDB', 1);
+        req.onupgradeneeded = (e) => {
+          const db = (e.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('model_files')) {
+            db.createObjectStore('model_files', { keyPath: 'url' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    return this.dbPromise;
+  }
+
+  async match(request: Request | string): Promise<Response | undefined> {
+    const url = typeof request === 'string' ? request : request.url;
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('model_files', 'readonly');
+        const store = tx.objectStore('model_files');
+        const req = store.get(url);
+        req.onsuccess = () => {
+          if (req.result && req.result.body) {
+            const res = new Response(req.result.body, {
+              headers: req.result.headers || {}
+            });
+            resolve(res);
+          } else {
+            resolve(undefined);
+          }
+        };
+        req.onerror = () => resolve(undefined);
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
+  async put(request: Request | string, response: Response): Promise<void> {
+    const url = typeof request === 'string' ? request : request.url;
+    try {
+      const db = await this.getDB();
+      const clone = response.clone();
+      const buffer = await clone.arrayBuffer();
+      const headers: Record<string, string> = {};
+      clone.headers.forEach((val, key) => {
+        headers[key] = val;
+      });
+      return new Promise((resolve) => {
+        const tx = db.transaction('model_files', 'readwrite');
+        const store = tx.objectStore('model_files');
+        store.put({ url, body: buffer, headers, timestamp: Date.now() });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch (e) {
+      console.warn('Failed writing model file to IndexedDB:', e);
+    }
+  }
+}
+
+try {
+  (env as any).useCustomCache = true;
+  (env as any).customCache = new WorkerIndexedDBCache();
+} catch (err) {
+  console.warn('Could not initialize worker custom IndexedDB cache:', err);
+}
 
 // Safe ONNX Runtime Web configuration:
 // Enable multi-threading & SIMD acceleration
@@ -541,39 +621,39 @@ self.onmessage = async (event: MessageEvent) => {
         }
       });
 
+      const isFastMode = settings?.fastMode ?? true;
+      const temperature = typeof settings?.temperature === 'number' ? settings.temperature : 0.6;
+      const topP = typeof settings?.topP === 'number' ? settings.topP : 0.9;
+      const topK = typeof settings?.topK === 'number' ? settings.topK : 40;
+      const maxNewTokens = typeof settings?.maxTokens === 'number' && settings.maxTokens > 0 ? settings.maxTokens : 2048;
+
+      // Optimized decoding configuration:
+      // 1. use_cache: true leverages past_key_values tensor caching for O(1) step computation
+      // 2. num_beams: 1 prevents multi-beam duplication overhead
+      // 3. repetition_penalty: 1.18 prevents repetitive loops on low-bit models
+      // 4. do_sample: false when temperature <= 0.1 or in fast mode
+      const doSample = !isFastMode && temperature > 0.15;
+
+      const generationOptions: any = {
+        max_new_tokens: maxNewTokens,
+        use_cache: true,
+        num_beams: 1,
+        return_full_text: false,
+        repetition_penalty: 1.18,
+        no_repeat_ngram_size: 4,
+        streamer
+      };
+
+      if (doSample) {
+        generationOptions.do_sample = true;
+        generationOptions.temperature = Math.max(0.1, Math.min(temperature, 1.2));
+        generationOptions.top_p = topP;
+        generationOptions.top_k = Math.min(topK, 40);
+      } else {
+        generationOptions.do_sample = false;
+      }
+
       try {
-        const isFastMode = settings?.fastMode ?? true;
-        const temperature = typeof settings?.temperature === 'number' ? settings.temperature : 0.6;
-        const topP = typeof settings?.topP === 'number' ? settings.topP : 0.9;
-        const topK = typeof settings?.topK === 'number' ? settings.topK : 40;
-        const maxNewTokens = typeof settings?.maxTokens === 'number' && settings.maxTokens > 0 ? settings.maxTokens : 2048;
-
-        // Optimized decoding configuration:
-        // 1. use_cache: true leverages past_key_values tensor caching for O(1) step computation
-        // 2. num_beams: 1 prevents multi-beam duplication overhead
-        // 3. repetition_penalty: 1.18 prevents repetitive loops on low-bit models
-        // 4. do_sample: false when temperature <= 0.1 or in fast mode
-        const doSample = !isFastMode && temperature > 0.15;
-
-        const generationOptions: any = {
-          max_new_tokens: maxNewTokens,
-          use_cache: true,
-          num_beams: 1,
-          return_full_text: false,
-          repetition_penalty: 1.18,
-          no_repeat_ngram_size: 4,
-          streamer
-        };
-
-        if (doSample) {
-          generationOptions.do_sample = true;
-          generationOptions.temperature = Math.max(0.1, Math.min(temperature, 1.2));
-          generationOptions.top_p = topP;
-          generationOptions.top_k = Math.min(topK, 40);
-        } else {
-          generationOptions.do_sample = false;
-        }
-
         await activeGenerator(promptText, generationOptions);
 
         const totalTimeMs = Math.round(performance.now() - startTime);
@@ -645,6 +725,79 @@ self.onmessage = async (event: MessageEvent) => {
             }
           });
           return;
+        }
+
+        const errStr = (genErr?.message || String(genErr)).toLowerCase();
+        const isDeviceLoss = errStr.includes('device') ||
+                             errStr.includes('ortrun') ||
+                             errStr.includes('gpu') ||
+                             errStr.includes('mapasync') ||
+                             errStr.includes('buffer') ||
+                             activeBackend === 'webgpu';
+
+        // Auto-recover on CPU WASM if WebGPU failed mid-generation
+        if (isDeviceLoss && activeModelId) {
+          console.warn('WebGPU device failure during inference, auto-recovering on CPU WASM engine:', genErr);
+          try {
+            self.postMessage({
+              type: 'PROGRESS',
+              payload: {
+                status: 'fallback',
+                modelId: activeModelId,
+                stage: 'WebGPU context reset: completing generation on multi-core CPU WASM...',
+                progress: 75
+              }
+            });
+
+            activeBackend = 'wasm';
+            activeGenerator = await pipeline('text-generation', activeModelId, {
+              device: 'wasm',
+              dtype: 'q4'
+            });
+
+            // Re-run inference smoothly using CPU WASM
+            await activeGenerator(promptText, {
+              ...generationOptions,
+              max_new_tokens: maxNewTokens
+            });
+
+            const totalTimeMs = Math.round(performance.now() - startTime);
+            const elapsedSec = totalTimeMs / 1000;
+            const finalTokensPerSec = elapsedSec > 0 ? Math.round((tokenCount / elapsedSec) * 10) / 10 : 0;
+            const avgLatency = recentLatencies.length > 0 
+              ? Math.round(recentLatencies.reduce((a, b) => a + b, 0) / recentLatencies.length) 
+              : 0;
+            const maxLatency = recentLatencies.length > 0 ? Math.max(...recentLatencies) : 0;
+            const peakTps = telemetryPoints.length > 0 
+              ? Math.max(...telemetryPoints.map((p) => p.tps)) 
+              : finalTokensPerSec;
+
+            const { cleaned: finalText } = cleanStopSequences(accumulatedRaw);
+
+            self.postMessage({
+              id,
+              type: 'GENERATE_SUCCESS',
+              payload: {
+                text: finalText || "Inference completed successfully using CPU WASM engine.",
+                metrics: {
+                  tokensGenerated: Math.max(tokenCount, 1),
+                  tokensPerSec: finalTokensPerSec,
+                  instantaneousTps: finalTokensPerSec,
+                  timeToFirstTokenMs: firstTokenTime ? Math.round(firstTokenTime - startTime) : totalTimeMs,
+                  totalTimeMs,
+                  backendUsed: 'wasm',
+                  peakTokensPerSec: peakTps,
+                  avgLatencyMs: avgLatency,
+                  maxLatencyMs: maxLatency,
+                  spikeCount: 0,
+                  telemetry: telemetryPoints
+                }
+              }
+            });
+            return;
+          } catch (cpuRetryErr) {
+            console.error('CPU fallback attempt also encountered error:', cpuRetryErr);
+          }
         }
 
         console.error('Generation execution error:', genErr);

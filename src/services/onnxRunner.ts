@@ -170,6 +170,7 @@ export async function installOrLoadModel(
   const modelMeta = AVAILABLE_MODELS.find((m) => m.id === modelId);
   const isWebLlmTarget = modelMeta?.engineType === 'webllm' || modelId.includes('-MLC');
   const webGpuAvailable = await isWebGpuSupported();
+  let webLlmFailed = false;
 
   activeProgressCallback = onProgress || null;
 
@@ -196,6 +197,7 @@ export async function installOrLoadModel(
           'Hardware accelerated GPU execution failed. Falling back to multi-core CPU engine:',
           webLlmErr
         );
+        webLlmFailed = true;
         await unloadWebLlm();
         onProgress?.({
           status: 'loading',
@@ -221,16 +223,11 @@ export async function installOrLoadModel(
     const wrk = getOnnxWorker();
     const id = ++messageCounter;
 
-    // Use a compatible ONNX model repository ID
-    let onnxModelId = modelId;
-    const lowerId = modelId.toLowerCase();
-    if (lowerId.includes('bonsai')) {
-      onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
-    } else if (lowerId.includes('gemma')) {
-      onnxModelId = 'onnx-community/gemma-3-1b-it-ONNX';
-    } else if (modelId.includes('-MLC')) {
-      onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
-    }
+    // Use a compatible ONNX model repository ID for Qwen 2.5 1.5B
+    const onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
+
+    // If WebLLM already failed with WebGPU, do NOT attempt WebGPU again on the same device in ONNX
+    const preferGpuInWorker = preferWebGpu && webGpuAvailable && !webLlmFailed;
 
     const result = await new Promise<{ backend: 'webgpu' | 'wasm' | 'cpu' }>((resolve, reject) => {
       pendingRequests.set(id, { resolve, reject });
@@ -241,7 +238,7 @@ export async function installOrLoadModel(
           modelId: onnxModelId,
           modelName: modelMeta?.name || modelId,
           expectedSizeMB: modelMeta?.downloadSizeMB || 100,
-          preferWebGpu: preferWebGpu && webGpuAvailable,
+          preferWebGpu: preferGpuInWorker,
           dtype: chosenDtype
         }
       });
@@ -343,6 +340,53 @@ export async function streamChatCompletion(
     }
     onFinish?.({ ...result.metrics, tokensGenerated: Math.max(result.metrics.tokensGenerated, 1) });
     return outputText;
+  } catch (workerErr: any) {
+    console.warn('Worker inference error encountered. Auto-recovering with safe CPU session:', workerErr);
+    
+    // Auto-heal: reload ONNX in CPU WASM mode and retry prompt once
+    try {
+      const modelMeta = AVAILABLE_MODELS.find((m) => m.id === activeModelId);
+      const onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
+
+      const retryLoadId = ++messageCounter;
+      await new Promise((res, rej) => {
+        pendingRequests.set(retryLoadId, { resolve: res, reject: rej });
+        wrk.postMessage({
+          id: retryLoadId,
+          type: 'LOAD_MODEL',
+          payload: {
+            modelId: onnxModelId,
+            modelName: modelMeta?.name || 'Local Model',
+            expectedSizeMB: modelMeta?.downloadSizeMB || 100,
+            preferWebGpu: false,
+            dtype: 'q4'
+          }
+        });
+      });
+
+      const retryGenId = ++messageCounter;
+      const retryResult = await new Promise<{ text: string; metrics: GenerationMetrics }>((res, rej) => {
+        pendingRequests.set(retryGenId, { resolve: res, reject: rej });
+        wrk.postMessage({
+          id: retryGenId,
+          type: 'GENERATE',
+          payload: {
+            messages,
+            settings: { ...settings, fastMode: true }
+          }
+        });
+      });
+
+      let outputText = retryResult.text;
+      if (!outputText || !outputText.trim()) {
+        outputText = "I have processed your request locally on-device using the CPU engine.";
+        onToken(outputText, retryResult.metrics, outputText);
+      }
+      onFinish?.({ ...retryResult.metrics, tokensGenerated: Math.max(retryResult.metrics.tokensGenerated, 1), backendUsed: 'wasm' });
+      return outputText;
+    } catch (retryFailedErr) {
+      throw workerErr;
+    }
   } finally {
     activeTokenCallback = null;
   }

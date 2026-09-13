@@ -8,14 +8,47 @@ import {
   MLCEngineInterface,
   InitProgressReport,
   ChatCompletionMessageParam,
-  prebuiltAppConfig
+  prebuiltAppConfig,
+  hasModelInCache,
+  deleteModelAllInfoInCache,
+  AppConfig
 } from '@mlc-ai/web-llm';
 import { InferenceSettings, TelemetryPoint } from '../types';
 import { GenerationMetrics, ProgressCallbackData } from './onnxRunner';
+import { setWebGpuActiveInUse } from './webgpuStatus';
 
 let webLlmEngine: MLCEngineInterface | null = null;
 let activeWebLlmModelId: string | null = null;
 let workerInstance: Worker | null = null;
+
+// Enforce IndexedDB cacheBackend for WebLLM so model weights and wasm are stored in IndexedDB and not in browser Cache API
+export const indexedDbAppConfig: AppConfig = {
+  ...prebuiltAppConfig,
+  cacheBackend: 'indexeddb'
+};
+
+/**
+ * Check if the model is already downloaded and saved in IndexedDB
+ */
+export async function isModelInIndexedDB(modelId: string): Promise<boolean> {
+  try {
+    return await hasModelInCache(modelId, indexedDbAppConfig);
+  } catch (err) {
+    console.warn('Error checking model in IndexedDB:', err);
+    return false;
+  }
+}
+
+/**
+ * Remove model files and wasm binary from IndexedDB
+ */
+export async function removeModelFromIndexedDB(modelId: string): Promise<void> {
+  try {
+    await deleteModelAllInfoInCache(modelId, indexedDbAppConfig);
+  } catch (err) {
+    console.warn('Error deleting model from IndexedDB:', err);
+  }
+}
 
 /**
  * Check if WebGPU is available on the device
@@ -62,11 +95,9 @@ export async function isWebGpuSupported(): Promise<boolean> {
     try {
       const device = await adapter.requestDevice();
       if (device) {
-        device.destroy?.();
         return true;
       }
-    } catch (deviceErr) {
-      // If adapter exists and was returned by browser, consider it supported
+    } catch {
       return true;
     }
 
@@ -80,6 +111,7 @@ export async function isWebGpuSupported(): Promise<boolean> {
  * Unloads active WebLLM engine and frees worker memory
  */
 export async function unloadWebLlm(): Promise<void> {
+  setWebGpuActiveInUse(false);
   if (webLlmEngine) {
     try {
       await webLlmEngine.unload();
@@ -155,17 +187,18 @@ export async function loadWebLlmModel(
       workerInstance,
       modelId,
       {
-        appConfig: prebuiltAppConfig,
+        appConfig: indexedDbAppConfig,
         initProgressCallback: progressCallback,
         logLevel: 'WARN'
       }
     );
     activeWebLlmModelId = modelId;
+    setWebGpuActiveInUse(true);
 
     onProgress?.({
       status: 'ready',
       modelId,
-      stage: 'Local AI engine active and ready for inference!',
+      stage: 'Local AI engine active in IndexedDB and ready for inference!',
       progress: 100
     });
   } catch (error: any) {

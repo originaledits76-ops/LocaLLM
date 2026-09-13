@@ -22,6 +22,7 @@ import { ChatMessage, InferenceSettings, ModelInfo, TelemetryPoint } from '../ty
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { FormattedMessage } from './FormattedMessage';
 import { HardwareOptimizationBanner } from './HardwareOptimizationBanner';
+import { WebGpuLiveStatus } from './WebGpuLiveStatus';
 
 interface ChatInterfaceProps {
   activeModel: ModelInfo | null;
@@ -49,6 +50,8 @@ interface ChatInterfaceProps {
   onSwitchModel: (modelId: string) => void;
   onOpenSettings: () => void;
   onNavigateToModels?: () => void;
+  onOpenModelInstallModal?: () => void;
+  onOpenWebGpuGuide?: () => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -65,7 +68,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onClearChat,
   onSwitchModel,
   onOpenSettings,
-  onNavigateToModels
+  onNavigateToModels,
+  onOpenModelInstallModal,
+  onOpenWebGpuGuide
 }) => {
   const [inputText, setInputText] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -190,67 +195,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <ChevronDown className="w-5 h-5 rotate-90 stroke-[2.5]" />
           </button>
 
-          {/* Center Model Selector Dropdown */}
-          <div className="relative">
+          {/* Center Model Badge & WebGPU Live Status */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowModelDropdown(!showModelDropdown)}
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-200/80 font-display font-bold text-xs text-zinc-900 bg-white hover:bg-zinc-50 transition-all shadow-2xs min-h-[40px]"
+              onClick={onOpenModelInstallModal || onNavigateToModels}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-zinc-200/80 font-display font-bold text-xs text-zinc-900 bg-white hover:bg-zinc-50 transition-all shadow-2xs min-h-[38px]"
+              title="Click to view Qwen 2.5 1.5B IndexedDB specs and status"
             >
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <span className="truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px]">
-                {activeModel ? activeModel.name : 'Select Model'}
+              <span className="truncate max-w-[130px] xs:max-w-[170px] sm:max-w-[220px]">
+                {activeModel ? activeModel.name : 'Qwen 2.5 1.5B'}
               </span>
-              <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0 ml-0.5" />
+              <span className="hidden sm:inline text-[10px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200/50">
+                IndexedDB
+              </span>
             </button>
 
-            {showModelDropdown && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 rounded-[24px] bg-white p-2.5 shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">
-                  Installed Models
-                </div>
-                {installedModels.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-zinc-600 text-center font-medium">
-                    No models installed yet.
-                    {onNavigateToModels && (
-                      <button
-                        onClick={() => {
-                          setShowModelDropdown(false);
-                          onNavigateToModels();
-                        }}
-                        className="block mt-2.5 mx-auto px-4 py-2 rounded-full bg-[#18181b] text-white text-xs font-bold hover:bg-zinc-800 transition-colors"
-                      >
-                        Explore Catalog
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  installedModels.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        onSwitchModel(m.id);
-                        setShowModelDropdown(false);
-                      }}
-                      className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors min-h-[42px] ${
-                        activeModel?.id === m.id
-                          ? 'bg-[#18181b] text-white font-bold shadow-2xs'
-                          : 'text-zinc-900 bg-white hover:bg-zinc-100'
-                      }`}
-                    >
-                      <div className="truncate pr-2">
-                        <p className="font-bold truncate">{m.name}</p>
-                        <p className={`text-[10px] font-mono ${activeModel?.id === m.id ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                          {m.parameterCount} • {m.quantization}
-                        </p>
-                      </div>
-                      {activeModel?.id === m.id && (
-                        <Check className="w-4 h-4 shrink-0 text-[#c7f43a]" />
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
+            <WebGpuLiveStatus compact={true} onOpenGuideModal={onOpenWebGpuGuide} />
           </div>
 
           {/* Right Action Icons */}

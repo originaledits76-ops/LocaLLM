@@ -8,6 +8,7 @@ import {
   idbSaveInstalledModel,
   idbRemoveInstalledModel
 } from './db';
+import { isModelInIndexedDB, removeModelFromIndexedDB } from './webllmRunner';
 
 const INSTALLED_MODELS_KEY = 'local_models_installed_registry_v1';
 
@@ -122,40 +123,55 @@ export async function touchModelUsage(modelId: string): Promise<void> {
 }
 
 /**
- * Removes a model from local tracking and attempts to purge its cached entries
+ * Verifies if a model is physically present in IndexedDB
+ */
+export async function verifyModelInIndexedDB(modelId: string, webLlmId?: string): Promise<boolean> {
+  // 1. Check WebLLM's tvmjs IndexedDB store
+  const targetWebLlmId = webLlmId || (modelId.includes('-MLC') ? modelId : 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC');
+  const inWebLlmIdb = await isModelInIndexedDB(targetWebLlmId);
+  if (inWebLlmIdb) return true;
+
+  // 2. Check application's installed models store in IndexedDB
+  const records = await idbGetInstalledModels();
+  return Boolean(records[modelId] || records[targetWebLlmId]);
+}
+
+/**
+ * Removes a model from local tracking and purges its IndexedDB storage
  */
 export async function uninstallModel(modelId: string): Promise<boolean> {
-  // 1. Remove from IndexedDB
+  // 1. Remove from Application IndexedDB
   await idbRemoveInstalledModel(modelId);
 
-  // 2. Remove from localStorage
+  // 2. Remove from WebLLM IndexedDB store
+  await removeModelFromIndexedDB(modelId);
+  if (!modelId.includes('-MLC')) {
+    await removeModelFromIndexedDB('Qwen2.5-1.5B-Instruct-q4f16_1-MLC');
+  }
+
+  // 3. Remove from localStorage
   const records = getInstalledModelRecords();
   delete records[modelId];
+  delete records['Qwen2.5-1.5B-Instruct-q4f16_1-MLC'];
   try {
     localStorage.setItem(INSTALLED_MODELS_KEY, JSON.stringify(records));
   } catch {
     // ignore
   }
 
-  // 3. Clean cache if CacheStorage is supported
+  // 4. Clean cache if any stray CacheStorage exists (ensure zero Cache API residue)
   try {
-    if ('caches' in window) {
+    if (typeof window !== 'undefined' && 'caches' in window) {
       const cacheNames = await caches.keys();
       for (const name of cacheNames) {
         if (name.includes('transformers') || name.includes('onnx') || name.includes('huggingface') || name.includes('webllm')) {
-          const cache = await caches.open(name);
-          const requests = await cache.keys();
-          for (const req of requests) {
-            if (req.url.includes(modelId.replace('/', '%2F')) || req.url.includes(modelId)) {
-              await cache.delete(req);
-            }
-          }
+          await caches.delete(name);
         }
       }
     }
-    return true;
   } catch (err) {
     console.warn('Error purging cache items:', err);
-    return true;
   }
+
+  return true;
 }

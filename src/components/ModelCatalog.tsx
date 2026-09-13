@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Download, Check, MessageSquare, Trash2, Sparkles, AlertCircle, Layers } from 'lucide-react';
+import React from 'react';
+import { Download, Check, MessageSquare, Trash2, Sparkles, Database, Zap, ShieldCheck, HardDrive, RefreshCw } from 'lucide-react';
 import { ModelInfo, ModelRecommendation, ModelRuntimeState } from '../types';
+import { WebGpuLiveStatus } from './WebGpuLiveStatus';
 
 interface ModelCatalogProps {
   recommendations: ModelRecommendation[];
@@ -15,9 +16,8 @@ interface ModelCatalogProps {
   onCancelInstall: (modelId: string) => void;
   onUninstall: (modelId: string) => void;
   onLaunchChat: (modelId: string) => void;
+  onOpenWebGpuGuide?: () => void;
 }
-
-type FilterType = 'recommended' | 'modest' | 'all' | 'installed';
 
 export const ModelCatalog: React.FC<ModelCatalogProps> = ({
   recommendations,
@@ -26,285 +26,201 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
   onInstall,
   onCancelInstall,
   onUninstall,
-  onLaunchChat
+  onLaunchChat,
+  onOpenWebGpuGuide
 }) => {
-  const [filter, setFilter] = useState<FilterType>('recommended');
+  const targetRec = recommendations[0];
+  const model = targetRec?.model;
 
-  const filteredRecommendations = recommendations.filter((rec) => {
-    const isInstalled = runtimeStates[rec.model.id]?.status === 'ready' || runtimeStates[rec.model.id]?.status === 'active';
-    if (filter === 'installed') return isInstalled;
-    if (filter === 'modest') {
-      return (
-        rec.model.bitPrecision === '2-bit' ||
-        rec.model.bitPrecision === '3-bit' ||
-        rec.model.parameterCount === '135M' ||
-        rec.model.parameterCount === '0.5B'
-      );
-    }
-    if (filter === 'recommended') return rec.level === 'perfect' || rec.level === 'comfortable';
-    return true; // 'all'
-  });
+  if (!model) return null;
+
+  const runtime = runtimeStates[model.id] || {
+    status: 'not_installed',
+    progress: 0,
+    statusMessage: '',
+    downloadedBytes: 0,
+    totalBytes: 0
+  };
+
+  const isInstalled = runtime.status === 'ready' || runtime.status === 'active';
+  const isDownloading = runtime.status === 'downloading' || runtime.status === 'loading';
 
   return (
-    <div className="space-y-4">
-      {/* Filter Bar Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 aidora-card-white p-4 sm:p-5">
-        <div>
-          <h2 className="text-base font-extrabold text-zinc-900 font-display tracking-tight">
-            Local Models Hub
-          </h2>
-          <p className="text-xs text-zinc-500 font-medium">
-            Open-weight AI models running 100% on-device via WebGPU
-          </p>
+    <div className="space-y-5 max-w-3xl mx-auto">
+      {/* Header Banner Card */}
+      <div className="aidora-card-white p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
+          <div>
+            <h2 className="text-xl font-extrabold text-zinc-900 font-display tracking-tight">
+              Active Model: {model.name}
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">
+              100% on-device private inference stored in IndexedDB with WebGPU acceleration
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#edf9d5] text-zinc-900 border border-black/10">
+              {model.quantization}
+            </span>
+          </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-full bg-zinc-100 border border-zinc-200/60 w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
-          <button
-            onClick={() => setFilter('recommended')}
-            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
-              filter === 'recommended'
-                ? 'bg-[#18181b] text-white shadow-xs'
-                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
-            }`}
-          >
-            Recommended
-          </button>
-          <button
-            onClick={() => setFilter('modest')}
-            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
-              filter === 'modest'
-                ? 'bg-[#e2f779] text-zinc-900 shadow-xs'
-                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
-            }`}
-          >
-            ⚡ Fast 2 &amp; 3-Bit
-          </button>
-          <button
-            onClick={() => setFilter('all')}
-            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
-              filter === 'all'
-                ? 'bg-[#18181b] text-white shadow-xs'
-                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
-            }`}
-          >
-            All Models
-          </button>
-          <button
-            onClick={() => setFilter('installed')}
-            className={`flex-1 sm:flex-none text-center px-4 py-1.5 text-xs font-bold rounded-full transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center whitespace-nowrap ${
-              filter === 'installed'
-                ? 'bg-[#18181b] text-white shadow-xs'
-                : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60'
-            }`}
-          >
-            Installed
-          </button>
-        </div>
-      </div>
+        {/* Live WebGPU Hardware Status Banner */}
+        <WebGpuLiveStatus onOpenGuideModal={onOpenWebGpuGuide} />
 
-      {/* Model Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-        {filteredRecommendations.map((rec) => {
-          const { model, level, isBestPick } = rec;
-          const runtime = runtimeStates[model.id] || {
-            status: 'not_installed',
-            progress: 0,
-            statusMessage: '',
-            downloadedBytes: 0,
-            totalBytes: 0
-          };
-
-          const isInstalled = runtime.status === 'ready' || runtime.status === 'active';
-          const isDownloading = runtime.status === 'downloading' || runtime.status === 'loading';
-          const isActive = activeModelId === model.id && runtime.status === 'active';
-
-          return (
-            <div
-              key={model.id}
-              id={`model-card-${model.id.replace(/[^a-zA-Z0-9]/g, '-')}`}
-              className={`aidora-card-interactive p-5 flex flex-col justify-between ${
-                isActive
-                  ? 'bg-[#edf9d5] border-2 border-[#18181b] shadow-md'
-                  : ''
-              }`}
-            >
-              <div>
-                {/* Top Row: Title & Badge */}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-black tracking-tight">
-                        {model.name}
-                      </h3>
-                      {isActive && (
-                        <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                      <p className="text-xs text-zinc-500 font-mono">
-                        {model.creator}
-                      </p>
-                      {model.bitPrecision === '2-bit' && (
-                        <span className="px-1.5 py-0.2 text-[10px] font-bold bg-amber-100 text-amber-900 rounded border border-amber-300">
-                          ⚡ 2-Bit Ultra Fast
-                        </span>
-                      )}
-                      {model.bitPrecision === '3-bit' && (
-                        <span className="px-1.5 py-0.2 text-[10px] font-bold bg-indigo-100 text-indigo-900 rounded border border-indigo-300">
-                          ⚡ 3-Bit Speed
-                        </span>
-                      )}
-                      {model.engineType === 'webllm' && (
-                        <span className="px-1.5 py-0.2 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
-                          ⚡ GPU Accelerated
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {isBestPick ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-black text-white shadow-xs">
-                      <Sparkles className="w-3 h-3" />
-                      Best Fit
-                    </span>
-                  ) : level === 'perfect' ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border border-black/20 bg-white/70 text-black">
-                      Smooth
-                    </span>
-                  ) : level === 'comfortable' ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100/80 text-zinc-700">
-                      Comfortable
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-medium text-zinc-400 border border-zinc-200">
-                      Demanding
-                    </span>
-                  )}
-                </div>
-
-                {/* Tagline */}
-                <p className="text-xs text-zinc-600 mt-2.5 line-clamp-2">
-                  {model.tagline}
-                </p>
-
-                {/* Clean Specs Row */}
-                <div className="flex flex-wrap items-center gap-2 mt-3 text-[11px] font-mono text-zinc-500">
-                  <span className="px-2 py-0.5 rounded-md bg-zinc-100/70 text-black">
-                    {model.parameterCount}
-                  </span>
-                  <span>•</span>
-                  <span>{model.quantization}</span>
-                  <span>•</span>
-                  <span>{model.downloadSizeMB} MB</span>
-                  <span>•</span>
-                  <span>Min {model.minRamGB}GB RAM</span>
-                </div>
-              </div>
-
-              {/* Bottom Action Area */}
-              <div className="mt-4 pt-3 border-t border-black/[0.06]">
-                {isDownloading ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-zinc-700 font-medium truncate max-w-[220px]" title={runtime.statusMessage || `Downloading ${model.name}`}>
-                        {runtime.statusMessage || `Downloading ${model.name}...`}
-                      </span>
-                      <span className="font-semibold text-black shrink-0">{runtime.progress}%</span>
-                    </div>
-
-                    {/* Progress Bar with smooth, non-jittering transition */}
-                    <div className="w-full h-2 rounded-full bg-zinc-100 overflow-hidden relative">
-                      <div
-                        className="h-full bg-black transition-[width] duration-200 ease-out rounded-full"
-                        style={{ width: `${Math.min(100, Math.max(5, runtime.progress))}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-                      <span>
-                        {(() => {
-                          const totalMB = Math.max(
-                            model.downloadSizeMB,
-                            runtime.totalBytes ? Math.round(runtime.totalBytes / (1024 * 1024)) : model.downloadSizeMB
-                          );
-                          const loadedMB = runtime.downloadedBytes
-                            ? Math.min(totalMB, Number((runtime.downloadedBytes / (1024 * 1024)).toFixed(1)))
-                            : 0;
-                          return loadedMB > 0 ? `${loadedMB.toFixed(1)} / ${totalMB} MB` : `~${totalMB} MB total`;
-                        })()}
-                      </span>
-                      <button
-                        onClick={() => onCancelInstall(model.id)}
-                        className="text-xs text-black underline hover:no-underline font-mono cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : isInstalled ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-black">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Ready</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        id={`uninstall-btn-${model.id}`}
-                        onClick={() => onUninstall(model.id)}
-                        className="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center rounded-full border border-black/10 hover:border-black text-zinc-400 hover:text-black transition-colors shrink-0"
-                        title="Delete model"
-                        aria-label="Delete model"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        id={`chat-btn-${model.id}`}
-                        onClick={() => onLaunchChat(model.id)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-black text-white hover:bg-zinc-800 transition-all shadow-xs min-h-[40px]"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Chat</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    id={`install-btn-${model.id}`}
-                    onClick={() => onInstall(model.id)}
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-xs font-semibold bg-black text-white hover:bg-zinc-800 transition-all shadow-xs min-h-[44px]"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download ({model.downloadSizeMB} MB)</span>
-                  </button>
-                )}
-
-                {runtime.error && (
-                  <div className="mt-2 p-2 rounded-xl bg-zinc-100 text-xs text-black flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{runtime.error}</span>
-                  </div>
-                )}
-              </div>
+        {/* Storage Architecture Highlight Card */}
+        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0">
+            <Database className="w-5 h-5" />
+          </div>
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-zinc-900">IndexedDB Storage Target</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-100 text-emerald-800 font-bold">
+                Zero Cache API
+              </span>
             </div>
-          );
-        })}
+            <p className="text-zinc-600 leading-relaxed">
+              Model weight shards (~{model.downloadSizeMB} MB) and WASM binaries are stored directly in your browser's persistent IndexedDB database (<code>tvmjs</code> store), eliminating cache eviction risks and ensuring offline reliability.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {filteredRecommendations.length === 0 && (
-        <div className="text-center py-10 liquid-glass-card rounded-3xl">
-          <Layers className="w-6 h-6 mx-auto text-zinc-400 mb-1.5" />
-          <p className="text-sm font-medium text-black">No models in this category</p>
-          <button
-            onClick={() => setFilter('recommended')}
-            className="mt-3 px-3.5 py-1 rounded-full text-xs font-semibold bg-black text-white"
-          >
-            Show Recommended
-          </button>
+      {/* Model Detail Card */}
+      <div className="aidora-card-white p-6 space-y-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+              Default Inference Engine
+            </span>
+            <h3 className="text-lg font-bold text-zinc-900 font-display mt-0.5">
+              {model.name}
+            </h3>
+            <p className="text-xs text-zinc-600 mt-1 max-w-xl">
+              {model.tagline}
+            </p>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <span className="text-sm font-extrabold text-zinc-900 font-mono block">
+              ~{model.downloadSizeMB} MB
+            </span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              IndexedDB footprint
+            </span>
+          </div>
         </div>
-      )}
+
+        {/* Spec Pill Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Parameters</span>
+            <span className="font-bold text-zinc-900 mt-0.5 block">{model.parameterCount}</span>
+          </div>
+          <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Precision</span>
+            <span className="font-bold text-zinc-900 mt-0.5 block">4-Bit (Q4F16)</span>
+          </div>
+          <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Context</span>
+            <span className="font-bold text-zinc-900 mt-0.5 block">{model.contextLength.toLocaleString()} tokens</span>
+          </div>
+          <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">License</span>
+            <span className="font-bold text-zinc-900 mt-0.5 block">{model.license}</span>
+          </div>
+        </div>
+
+        {/* Installation & Action Bar */}
+        {isDownloading ? (
+          <div className="space-y-2 p-4 rounded-2xl bg-zinc-50 border border-zinc-200">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="flex items-center gap-1.5 text-zinc-800">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                <span>Downloading to IndexedDB...</span>
+              </span>
+              <span className="font-mono text-zinc-900">{runtime.progress}%</span>
+            </div>
+
+            <div className="w-full h-2 rounded-full bg-zinc-200 overflow-hidden">
+              <div
+                className="h-full bg-[#18181b] transition-all duration-300 rounded-full"
+                style={{ width: `${Math.max(5, runtime.progress)}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono pt-0.5">
+              <span className="truncate max-w-[280px]">
+                {runtime.statusMessage || 'Downloading weights...'}
+              </span>
+              <span>
+                {((runtime.downloadedBytes || 0) / (1024 * 1024)).toFixed(1)} / {model.downloadSizeMB} MB
+              </span>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onCancelInstall(model.id)}
+                className="px-3 py-1 rounded-full bg-zinc-200 hover:bg-zinc-300 text-zinc-800 text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            <div className="flex items-center gap-2">
+              {isInstalled ? (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-bold bg-[#edf9d5] px-3 py-1.5 rounded-full border border-black/10">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Installed in IndexedDB</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-semibold bg-zinc-100 px-3 py-1.5 rounded-full">
+                  <HardDrive className="w-3.5 h-3.5" />
+                  <span>Not Installed</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              {isInstalled && (
+                <button
+                  type="button"
+                  onClick={() => onUninstall(model.id)}
+                  className="p-2.5 rounded-full bg-zinc-100 hover:bg-red-50 hover:text-red-600 text-zinc-600 transition-colors"
+                  title="Uninstall from IndexedDB"
+                  aria-label="Uninstall from IndexedDB"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+
+              {isInstalled ? (
+                <button
+                  type="button"
+                  onClick={() => onLaunchChat(model.id)}
+                  className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105"
+                >
+                  <MessageSquare className="w-4 h-4 text-[#c7f43a]" />
+                  <span>Start Chatting</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onInstall(model.id)}
+                  className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105"
+                >
+                  <Download className="w-4 h-4 text-[#c7f43a]" />
+                  <span>Install to IndexedDB ({model.downloadSizeMB} MB)</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

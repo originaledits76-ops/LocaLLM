@@ -26,7 +26,7 @@ import {
   TelemetryPoint
 } from './types';
 import { scanDeviceHardware, evaluateModelRecommendations } from './services/deviceScanner';
-import { getInstalledModelRecordsAsync, uninstallModel } from './services/cacheManager';
+import { getInstalledModelRecordsAsync, uninstallModel, verifyModelInIndexedDB } from './services/cacheManager';
 import {
   idbGetAllMessages,
   idbSaveMessage,
@@ -43,10 +43,13 @@ import {
   isModelLoaded,
   unloadActiveModel
 } from './services/onnxRunner';
+import { subscribeWebGpuStatus, checkLiveWebGpu, WebGpuStatusInfo } from './services/webgpuStatus';
 import { DeviceSpecsCard } from './components/DeviceSpecsCard';
 import { ModelCatalog } from './components/ModelCatalog';
 import { ChatInterface } from './components/ChatInterface';
 import { HomeView } from './components/HomeView';
+import { ModelInstallModal } from './components/ModelInstallModal';
+import { WebGpuLiveStatus } from './components/WebGpuLiveStatus';
 
 type AppTab = 'home' | 'chat' | 'models' | 'hardware' | 'settings';
 
@@ -104,6 +107,10 @@ export default function App() {
 
   // Floating Status Toast
   const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  // Model Install & Hardware Modal Prompts
+  const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
+  const [showWebGpuGuide, setShowWebGpuGuide] = useState<boolean>(false);
 
   /**
    * Run initial hardware diagnostics scan on mount
@@ -200,6 +207,28 @@ export default function App() {
       } else {
         performHardwareScan();
       }
+
+      // 4. Verify whether Qwen 2.5 1.5B is stored in IndexedDB
+      const targetModel = AVAILABLE_MODELS[0];
+      if (targetModel) {
+        const isInstalledInIdb = await verifyModelInIndexedDB(targetModel.id, targetModel.webLlmModelId);
+        if (isInstalledInIdb) {
+          setRuntimeStates((prev) => ({
+            ...prev,
+            [targetModel.id]: {
+              status: 'ready',
+              progress: 100,
+              statusMessage: 'Ready in IndexedDB',
+              downloadedBytes: targetModel.downloadSizeMB * 1024 * 1024,
+              totalBytes: targetModel.downloadSizeMB * 1024 * 1024,
+              error: null
+            }
+          }));
+        } else {
+          // On app open: automatically prompt user to install the model with displaying its info!
+          setShowInstallModal(true);
+        }
+      }
     }
     loadIndexedDbState();
   }, [performHardwareScan]);
@@ -277,7 +306,7 @@ export default function App() {
         [modelId]: {
           status: 'ready',
           progress: 100,
-          statusMessage: 'Ready in browser cache',
+          statusMessage: 'Ready in IndexedDB',
           downloadedBytes: totalEstimatedBytes,
           totalBytes: totalEstimatedBytes,
           error: null
@@ -290,7 +319,7 @@ export default function App() {
           systemPrompt: targetModel.systemPromptDefault
         }));
       }
-      setToastNotice(`"${modelDisplayName}" installed. Ready to chat.`);
+      setToastNotice(`"${modelDisplayName}" installed in IndexedDB. Ready to chat.`);
       setTimeout(() => setToastNotice(null), 3000);
     } else {
       setRuntimeStates((prev) => ({
@@ -344,7 +373,7 @@ export default function App() {
         error: null
       }
     }));
-    setToastNotice('Removed from browser cache.');
+    setToastNotice('Removed from IndexedDB.');
     setTimeout(() => setToastNotice(null), 2500);
   };
 
@@ -526,12 +555,21 @@ export default function App() {
               </span>
             </div>
 
-            {activeModel && (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs font-semibold text-zinc-800 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="truncate max-w-[160px]">{activeModel.name}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {activeModel && (
+                <button
+                  type="button"
+                  onClick={() => setShowInstallModal(true)}
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs font-semibold text-zinc-800 shadow-2xs hover:bg-zinc-50 transition-colors"
+                  title="View Model Details & IndexedDB Status"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="truncate max-w-[160px]">{activeModel.name}</span>
+                </button>
+              )}
+
+              <WebGpuLiveStatus compact={true} onOpenGuideModal={() => setShowWebGpuGuide(true)} />
+            </div>
           </div>
         </header>
       )}
@@ -549,6 +587,10 @@ export default function App() {
         <HomeView
           activeModel={activeModel}
           installedModels={installedModels}
+          isModelInstalled={
+            runtimeStates[AVAILABLE_MODELS[0].id]?.status === 'ready' ||
+            runtimeStates[AVAILABLE_MODELS[0].id]?.status === 'active'
+          }
           onStartNewChat={(prompt) => {
             if (prompt) {
               handleSendMessage(prompt);
@@ -557,6 +599,8 @@ export default function App() {
           }}
           onNavigateToModels={() => setActiveTab('models')}
           onNavigateToHardware={() => setActiveTab('hardware')}
+          onPromptInstall={() => setShowInstallModal(true)}
+          onOpenWebGpuGuide={() => setShowWebGpuGuide(true)}
         />
       ) : activeTab === 'chat' ? (
         /* Full View Chat Interface */
@@ -576,6 +620,8 @@ export default function App() {
             onSwitchModel={handleLaunchChat}
             onOpenSettings={() => setActiveTab('settings')}
             onNavigateToModels={() => setActiveTab('models')}
+            onOpenModelInstallModal={() => setShowInstallModal(true)}
+            onOpenWebGpuGuide={() => setShowWebGpuGuide(true)}
           />
         </div>
       ) : (
@@ -591,6 +637,7 @@ export default function App() {
                 onCancelInstall={handleCancelInstall}
                 onUninstall={handleUninstallModel}
                 onLaunchChat={handleLaunchChat}
+                onOpenWebGpuGuide={() => setShowWebGpuGuide(true)}
               />
             </div>
           )}
@@ -814,6 +861,33 @@ export default function App() {
             </button>
           </nav>
         </div>
+      )}
+
+      {/* Model Install Modal (Prompted on app open if not installed, or via button) */}
+      <ModelInstallModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+        model={AVAILABLE_MODELS[0]}
+        runtimeState={runtimeStates[AVAILABLE_MODELS[0].id]}
+        onInstall={handleInstallModel}
+        onCancelInstall={handleCancelInstall}
+        onUninstall={handleUninstallModel}
+        onStartChat={(modelId) => {
+          setShowInstallModal(false);
+          handleLaunchChat(modelId);
+        }}
+        onOpenWebGpuGuide={() => {
+          setShowInstallModal(false);
+          setShowWebGpuGuide(true);
+        }}
+      />
+
+      {/* WebGPU Hardware Details / Enable Guide Dialog */}
+      {showWebGpuGuide && (
+        <WebGpuLiveStatus
+          isOpen={true}
+          onClose={() => setShowWebGpuGuide(false)}
+        />
       )}
     </div>
   );

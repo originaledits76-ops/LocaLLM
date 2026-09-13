@@ -22,21 +22,28 @@ import {
   Plus
 } from 'lucide-react';
 import { ModelInfo } from '../types';
+import { WebGpuLiveStatus } from './WebGpuLiveStatus';
 
 interface HomeViewProps {
   activeModel: ModelInfo | null;
   installedModels: ModelInfo[];
+  isModelInstalled?: boolean;
   onStartNewChat: (prompt?: string) => void;
   onNavigateToModels: () => void;
   onNavigateToHardware: () => void;
+  onPromptInstall?: () => void;
+  onOpenWebGpuGuide?: () => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
   activeModel,
   installedModels,
+  isModelInstalled = false,
   onStartNewChat,
   onNavigateToModels,
-  onNavigateToHardware
+  onNavigateToHardware,
+  onPromptInstall,
+  onOpenWebGpuGuide
 }) => {
   const [selectedTopic, setSelectedTopic] = useState<string>('All');
 
@@ -119,10 +126,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </div>
 
       {/* Main Headline */}
-      <div className="pt-2">
+      <div className="pt-2 space-y-3">
         <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-zinc-900 tracking-tight leading-tight">
           How can I help you <br className="hidden xs:inline" /> today?
         </h1>
+
+        {/* Live WebGPU Hardware Status Banner */}
+        <WebGpuLiveStatus onOpenGuideModal={onOpenWebGpuGuide} />
       </div>
 
       {/* Start New Chat Large Action Pill Button (Exact Match to Aidora center mockup) */}
@@ -227,28 +237,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* Model Status Card */}
+      {/* Model Status & IndexedDB Card */}
       <div className="aidora-card-white p-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0">
             <Zap className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-zinc-900 font-display">
-              {activeModel ? activeModel.name : 'No Model Selected'}
-            </h4>
-            <p className="text-[11px] text-zinc-500 font-medium">
-              {installedModels.length} local model{installedModels.length !== 1 ? 's' : ''} ready in cache
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-bold text-zinc-900 font-display">
+                {activeModel ? activeModel.name : 'Qwen 2.5 1.5B (Instruct)'}
+              </h4>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[#edf9d5] text-zinc-900 border border-black/10">
+                IndexedDB
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500 font-medium mt-0.5">
+              {isModelInstalled
+                ? 'Installed in IndexedDB • Ready for WebGPU inference'
+                : 'Not installed yet • Click to download & store in IndexedDB'}
             </p>
           </div>
         </div>
 
-        <button
-          onClick={onNavigateToModels}
-          className="px-3.5 py-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold transition-colors shrink-0"
-        >
-          Manage
-        </button>
+        {isModelInstalled ? (
+          <button
+            onClick={onPromptInstall}
+            className="px-3.5 py-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold transition-colors shrink-0"
+          >
+            Model Info
+          </button>
+        ) : (
+          <button
+            onClick={onPromptInstall}
+            className="px-4 py-2 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs shrink-0 flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#c7f43a]" />
+            <span>Install</span>
+          </button>
+        )}
       </div>
     </div>
   );
