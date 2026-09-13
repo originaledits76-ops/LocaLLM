@@ -35,7 +35,7 @@ interface ChatInterfaceProps {
     tokensPerSec?: number;
     instantaneousTps?: number;
     timeToFirstTokenMs?: number;
-    backendUsed?: 'webgpu' | 'wasm' | 'cpu';
+    backendUsed?: 'npu' | 'webgpu' | 'wasm' | 'cpu';
     peakTokensPerSec?: number;
     avgLatencyMs?: number;
     maxLatencyMs?: number;
@@ -392,7 +392,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {isGenerating && (
               <div className="flex gap-3 max-w-[94%] sm:max-w-xl mr-auto justify-start">
                 <div className="w-8 h-8 rounded-full bg-[#18181b] text-[#c7f43a] flex items-center justify-center shrink-0 shadow-2xs mt-1">
-                  <Sparkles className="w-4 h-4 animate-spin" />
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="relative rounded-[26px] rounded-tl-md p-4 sm:p-5 text-sm leading-relaxed bg-white text-zinc-900 font-medium shadow-2xs border border-zinc-200/60">
                   <div>
@@ -401,7 +401,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     ) : (
                       <span className="text-zinc-400 font-medium text-xs">Generating response...</span>
                     )}
-                    <span className="inline-block w-2 h-4 ml-1 bg-[#18181b] animate-pulse align-middle" />
+                    <span className="inline-block w-1.5 h-4 ml-1 bg-[#18181b] align-middle" />
                   </div>
                 </div>
               </div>

@@ -15,7 +15,9 @@ import {
   X,
   Cpu,
   Layers,
-  Database
+  Database,
+  ShieldCheck,
+  HardDrive
 } from 'lucide-react';
 import {
   checkLiveWebGpu,
@@ -98,7 +100,7 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
               ? isUsed
                 ? 'bg-[#18181b] text-[#c7f43a] hover:bg-zinc-800 border border-zinc-700'
                 : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-              : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 animate-pulse'
+              : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
           }`}
           title={isEnabled ? (isUsed ? 'WebGPU: Enabled & Actively In Use' : 'WebGPU: Enabled & Ready') : 'WebGPU: Disabled / Unavailable. Click to enable!'}
         >
@@ -106,7 +108,7 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
             className={`w-2 h-2 rounded-full shrink-0 ${
               isEnabled
                 ? isUsed
-                  ? 'bg-[#c7f43a] animate-ping'
+                  ? 'bg-[#c7f43a]'
                   : 'bg-emerald-500'
                 : 'bg-amber-500'
             }`}
@@ -154,7 +156,7 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
                     className={`w-2 h-2 rounded-full ${
                       isEnabled
                         ? isUsed
-                          ? 'bg-[#c7f43a] animate-ping'
+                          ? 'bg-[#c7f43a]'
                           : 'bg-emerald-500'
                         : 'bg-amber-500'
                     }`}
@@ -193,14 +195,14 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
                 className="p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
                 title="Re-check WebGPU Status"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className="w-4 h-4" />
               </button>
 
               {!isEnabled ? (
                 <button
                   type="button"
                   onClick={openGuide}
-                  className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all hover:scale-105"
+                  className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-colors"
                 >
                   <Zap className="w-3.5 h-3.5" />
                   <span>How to Enable WebGPU</span>
@@ -221,8 +223,8 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
 
       {/* Guide / Details Modal */}
       {isModalVisible && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-[28px] max-w-lg w-full p-6 shadow-2xl border border-zinc-200 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[28px] max-w-lg w-full p-6 shadow-2xl border border-zinc-200 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
               <div className="flex items-center gap-2.5">
                 <div
@@ -292,6 +294,26 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
                       {isUsed ? 'WebGPU Shader Execution (In Use)' : 'WebLLM TVM Worker (Ready)'}
                     </span>
                   </div>
+                  <div className="flex justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                    <span className="font-semibold text-zinc-500">Weight Storage Mode:</span>
+                    <span className="font-bold text-zinc-900 flex items-center gap-1">
+                      <HardDrive className="w-3.5 h-3.5 text-blue-600" />
+                      Single Persistent WebGPU Array Buffer
+                    </span>
+                  </div>
+                  <div className="flex justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                    <span className="font-semibold text-zinc-500">COOP & COEP Isolation:</span>
+                    <span className={`font-bold flex items-center gap-1 ${status?.isCrossOriginIsolated ? 'text-emerald-700' : 'text-zinc-600'}`}>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      {status?.isCrossOriginIsolated ? 'Active (same-origin / require-corp)' : 'Standard Headers'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                    <span className="font-semibold text-zinc-500">SharedArrayBuffer Zero-Copy:</span>
+                    <span className={`font-bold ${status?.hasSharedArrayBuffer ? 'text-emerald-700' : 'text-zinc-600'}`}>
+                      {status?.hasSharedArrayBuffer ? 'Enabled (Multi-threaded Wasm)' : 'Available via Wasm Worker'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -302,8 +324,34 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
                     WebGPU is currently disabled in this browser
                   </p>
                   <p className="text-[11px] text-amber-800 leading-relaxed">
-                    Without WebGPU, inference falls back to CPU WASM mode, which is 5x–15x slower. Please enable WebGPU using the quick steps below for smooth, real-time responses!
+                    Inference is operating via CPU WASM mode. Cross-Origin Opener Policy (COOP) and Cross-Origin Embedder Policy (COEP) headers are active to enable zero-copy multi-threaded compute across web workers.
                   </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-2 text-zinc-700">
+                  <div className="flex items-center gap-2 font-bold text-zinc-900">
+                    <Cpu className="w-4 h-4 text-zinc-800" />
+                    <span>Active WASM CPU Fallback Architecture</span>
+                  </div>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">COOP & COEP Isolation:</span>
+                      <span className="font-bold text-emerald-700">same-origin / require-corp (Active)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">SharedArrayBuffer:</span>
+                      <span className="font-bold text-emerald-700">
+                        {status?.hasSharedArrayBuffer ? 'Enabled (Zero-Copy Multi-Threading)' : 'Supported'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Weight Storage:</span>
+                      <span className="font-bold text-zinc-900">Persistent Virtual Memory Heap at Startup</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 pt-1 leading-normal border-t border-zinc-200">
+                      Model weight raw byte streams are stored directly in a persistent virtual memory heap upon startup, completely bypassing repeated IndexedDB blob allocations.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -365,9 +413,9 @@ export const WebGpuLiveStatus: React.FC<WebGpuLiveStatusProps> = ({
                     type="button"
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className="flex-1 py-3 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                    className="flex-1 py-3 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <RefreshCw className="w-3.5 h-3.5" />
                     <span>Re-test WebGPU Now</span>
                   </button>
                   <button

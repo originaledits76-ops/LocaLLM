@@ -84,7 +84,7 @@ export default function App() {
     tokensPerSec?: number;
     instantaneousTps?: number;
     timeToFirstTokenMs?: number;
-    backendUsed?: 'webgpu' | 'wasm' | 'cpu';
+    backendUsed?: 'webgpu' | 'npu' | 'wasm' | 'cpu';
     peakTokensPerSec?: number;
     avgLatencyMs?: number;
     maxLatencyMs?: number;
@@ -189,7 +189,11 @@ export default function App() {
       // 1. Restore messages
       const savedMsgs = await idbGetAllMessages();
       if (savedMsgs && savedMsgs.length > 0) {
-        setMessages(savedMsgs);
+        // Filter out any stale dummy placeholder messages from past runs
+        const cleanedMsgs = savedMsgs.filter(
+          (m) => !(m.role === 'assistant' && m.content.includes('I have received your prompt and processed it locally on-device'))
+        );
+        setMessages(cleanedMsgs);
       }
 
       // 2. Restore settings
@@ -468,10 +472,12 @@ export default function App() {
       // 3. Clear progress text before starting token stream
       setStreamingContent('');
 
-      const conversation = currentMessages.map((m) => ({
-        role: m.role,
-        content: m.content
-      }));
+      const conversation = currentMessages
+        .filter((m) => !(m.role === 'assistant' && m.content.includes('I have received your prompt and processed it locally on-device')))
+        .map((m) => ({
+          role: m.role,
+          content: m.content
+        }));
 
       let finalMetrics: any = {};
       let collectedTelemetry: TelemetryPoint[] = [];
@@ -807,9 +813,9 @@ export default function App() {
             {/* Home Tab */}
             <button
               onClick={() => setActiveTab('home')}
-              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+              className={`p-2.5 rounded-full transition-colors cursor-pointer ${
                 activeTab === 'home'
-                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  ? 'bg-[#18181b] text-white shadow-xs'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
               }`}
               title="Home"
@@ -820,7 +826,7 @@ export default function App() {
             {/* Chat Tab */}
             <button
               onClick={() => setActiveTab('chat')}
-              className="p-2.5 rounded-full transition-all cursor-pointer relative text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+              className="p-2.5 rounded-full transition-colors cursor-pointer relative text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
               title="Chat AI"
             >
               <MessageSquare className="w-5 h-5" />
@@ -832,9 +838,9 @@ export default function App() {
             {/* Models Catalog Tab */}
             <button
               onClick={() => setActiveTab('models')}
-              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+              className={`p-2.5 rounded-full transition-colors cursor-pointer ${
                 activeTab === 'models'
-                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  ? 'bg-[#18181b] text-white shadow-xs'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
               }`}
               title="Models Hub"
@@ -845,9 +851,9 @@ export default function App() {
             {/* Hardware Tab */}
             <button
               onClick={() => setActiveTab('hardware')}
-              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+              className={`p-2.5 rounded-full transition-colors cursor-pointer ${
                 activeTab === 'hardware'
-                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  ? 'bg-[#18181b] text-white shadow-xs'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
               }`}
               title="Hardware Diagnostics"
@@ -858,9 +864,9 @@ export default function App() {
             {/* Settings Tab */}
             <button
               onClick={() => setActiveTab('settings')}
-              className={`p-2.5 rounded-full transition-all cursor-pointer ${
+              className={`p-2.5 rounded-full transition-colors cursor-pointer ${
                 activeTab === 'settings'
-                  ? 'bg-[#18181b] text-white shadow-xs scale-105'
+                  ? 'bg-[#18181b] text-white shadow-xs'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
               }`}
               title="Settings"

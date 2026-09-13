@@ -122,6 +122,64 @@ export async function scanDeviceHardware(customRamGB?: number): Promise<DeviceSp
     webGpuAvailable = false;
   }
 
+  // 3.5. NPU (Neural Processing Unit) detection
+  let npuAvailable = false;
+  let npuName: string | null = null;
+  let npuBackend: 'webnn' | 'directml' | 'hardware' | null = null;
+
+  try {
+    const navAny = nav as any;
+    // Method A: W3C WebNN API
+    if (navAny.ml && typeof navAny.ml.createContext === 'function') {
+      try {
+        const npuCtx = await navAny.ml.createContext({ deviceType: 'npu' });
+        if (npuCtx) {
+          npuAvailable = true;
+          npuName = 'WebNN Dedicated Hardware NPU';
+          npuBackend = 'webnn';
+        }
+      } catch {
+        try {
+          const generalCtx = await navAny.ml.createContext({ powerPreference: 'low-power' });
+          if (generalCtx) {
+            npuAvailable = true;
+            npuName = 'WebNN Neural Engine (Low-Power)';
+            npuBackend = 'webnn';
+          }
+        } catch {
+          // Context unavailable
+        }
+      }
+    }
+
+    // Method B: Check adapter info for NPU / Neural / AI Boost identifiers
+    if (!npuAvailable && nav.gpu && typeof (nav.gpu as any).requestAdapter === 'function') {
+      try {
+        const lowPowerAdapter = await (nav.gpu as any).requestAdapter({ powerPreference: 'low-power' });
+        if (lowPowerAdapter) {
+          const info = (lowPowerAdapter as any).info;
+          const desc = [info?.vendor, info?.architecture, info?.description].filter(Boolean).join(' ');
+          if (/npu|neural|vpu|ai boost|hexagon|ane|directml|ryzen ai/i.test(desc)) {
+            npuAvailable = true;
+            npuName = desc || 'Hardware Neural Processing Unit';
+            npuBackend = 'hardware';
+          }
+        }
+      } catch {
+        // Ignore adapter error
+      }
+    }
+
+    // Method C: Window or navigator flags
+    if (!npuAvailable && (navAny.webnn || (typeof window !== 'undefined' && (window as any).webnn))) {
+      npuAvailable = true;
+      npuName = 'WebNN DirectML Neural Accelerator';
+      npuBackend = 'webnn';
+    }
+  } catch (err) {
+    console.warn('NPU detection check notice:', err);
+  }
+
   // 4. WebGL renderer check
   let webGlRenderer: string | null = null;
   try {
@@ -184,6 +242,9 @@ export async function scanDeviceHardware(customRamGB?: number): Promise<DeviceSp
     cpuCores,
     webGpuAvailable,
     webGpuAdapterName,
+    npuAvailable,
+    npuName,
+    npuBackend,
     webGlRenderer,
     storageQuotaMB,
     storageUsageMB,
@@ -206,11 +267,33 @@ export function evaluateModelRecommendations(
     let level: ModelRecommendation['level'] = 'comfortable';
     const reasons: string[] = [];
 
+    // NPU Hardware Match
+    if (specs.npuAvailable) {
+      if (model.id === 'smollm2-135m-instruct' || model.parameterCount === '135M') {
+        score += 45;
+        reasons.unshift('Hardware NPU detected: Ultra-compact 135M weights run natively on Neural Processing Unit for rapid, battery-friendly inference');
+      } else if (model.id === 'qwen-2.5-0.5b-instruct' || model.parameterCount === '0.5B') {
+        score += 25;
+        reasons.unshift('NPU compatible: 0.5B parameters map cleanly into neural accelerator cache');
+      }
+    }
+
     // RAM factor & Hardware Matching
-    if (specs.ramGB <= 4) {
-      if (model.id === 'qwen-2.5-0.5b-instruct' || model.parameterCount === '0.5B') {
+    if (specs.ramGB <= 2) {
+      if (model.id === 'smollm2-135m-instruct' || model.parameterCount === '135M') {
+        score += 50;
+        reasons.unshift(`Ideal for ${specs.ramGB}GB RAM: Minimal ~135MB memory footprint prevents browser tab out-of-memory pressure`);
+      } else {
+        score -= 25;
+        reasons.push(`May cause browser memory pressure on ${specs.ramGB}GB RAM systems`);
+      }
+    } else if (specs.ramGB <= 4) {
+      if (model.id === 'smollm2-135m-instruct' || model.parameterCount === '135M') {
+        score += 35;
+        reasons.unshift(`Ultra-nimble on ${specs.ramGB}GB RAM with zero tab lag and near-instant load`);
+      } else if (model.id === 'qwen-2.5-0.5b-instruct' || model.parameterCount === '0.5B') {
         score += 40;
-        reasons.unshift(`Recommended for ${specs.ramGB}GB RAM: Ultra-compact footprint prevents browser tab out-of-memory pressure`);
+        reasons.unshift(`Recommended for ${specs.ramGB}GB RAM: Lightweight footprint with reliable intelligence`);
       } else {
         score -= 15;
         reasons.push(`Requires more memory than recommended for ${specs.ramGB}GB RAM systems`);
@@ -220,6 +303,9 @@ export function evaluateModelRecommendations(
       if (model.id === 'qwen-2.5-1.5b-instruct' || model.parameterCount === '1.5B') {
         score += 40;
         reasons.unshift(`Recommended for ${specs.ramGB}GB RAM: Higher reasoning capability with abundant memory headroom`);
+      } else if (model.id === 'smollm2-135m-instruct') {
+        score += 20;
+        reasons.push(`Instant responses and lightweight memory consumption on your ${specs.ramGB}GB RAM device`);
       } else {
         score += 15;
         reasons.push(`Lightweight and fast, though 1.5B offers richer intelligence on your ${specs.ramGB}GB RAM device`);

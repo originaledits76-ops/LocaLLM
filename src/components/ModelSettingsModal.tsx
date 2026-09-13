@@ -48,8 +48,8 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs">
-      <div className="w-full max-w-md max-h-[90dvh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white border border-black/10 p-5 sm:p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40">
+      <div className="w-full max-w-md max-h-[90dvh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white border border-black/10 p-5 sm:p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-black/10 shrink-0">
           <div>

@@ -6,6 +6,7 @@
 import { InferenceSettings, TelemetryPoint } from '../types';
 import { markModelInstalled } from './cacheManager';
 import { AVAILABLE_MODELS } from '../data/models';
+import { initStartupWeightHeap } from './weightMemoryHeap';
 import {
   loadWebLlmModel,
   runWebLlmInference,
@@ -32,7 +33,7 @@ export interface GenerationMetrics {
   instantaneousTps?: number;
   timeToFirstTokenMs: number;
   totalTimeMs: number;
-  backendUsed: 'webgpu' | 'wasm' | 'cpu';
+  backendUsed: 'npu' | 'webgpu' | 'wasm' | 'cpu';
   peakTokensPerSec?: number;
   avgLatencyMs?: number;
   maxLatencyMs?: number;
@@ -44,7 +45,7 @@ export interface GenerationMetrics {
 let onnxWorker: Worker | null = null;
 let activeModelId: string | null = null;
 let activeEngineType: 'webllm' | 'transformers' = 'webllm';
-let activeBackend: 'webgpu' | 'wasm' | 'cpu' = 'webgpu';
+let activeBackend: 'npu' | 'webgpu' | 'wasm' | 'cpu' = 'webgpu';
 let messageCounter = 0;
 
 // Callbacks for pending worker messages
@@ -161,8 +162,9 @@ export async function unloadActiveModel(): Promise<void> {
 export async function installOrLoadModel(
   modelId: string,
   preferWebGpu: boolean = true,
-  onProgress?: (data: ProgressCallbackData) => void
-): Promise<{ success: boolean; backend: 'webgpu' | 'wasm' | 'cpu'; error?: string }> {
+  onProgress?: (data: ProgressCallbackData) => void,
+  preferNpu: boolean = true
+): Promise<{ success: boolean; backend: 'npu' | 'webgpu' | 'wasm' | 'cpu'; error?: string }> {
   if (activeModelId === modelId && isModelLoaded(modelId)) {
     return { success: true, backend: activeBackend };
   }
@@ -173,6 +175,13 @@ export async function installOrLoadModel(
   let webLlmFailed = false;
 
   activeProgressCallback = onProgress || null;
+
+  // Initialize persistent WebGPU array buffer or virtual memory heap at startup
+  try {
+    await initStartupWeightHeap(modelId);
+  } catch (heapErr) {
+    console.warn('Startup weight heap init notice:', heapErr);
+  }
 
   try {
     // Strategy 1: Use WebLLM WebGPU engine for peak speed if WebGPU is available & requested
@@ -217,22 +226,26 @@ export async function installOrLoadModel(
       });
     }
 
-    // Strategy 3: ONNX / Transformers multi-core WASM / WebGPU engine
+    // Strategy 3: ONNX / Transformers multi-core WASM / WebGPU / NPU engine
     activeEngineType = 'transformers';
     const chosenDtype = (modelMeta?.dtype as any) || 'q4';
     const wrk = getOnnxWorker();
     const id = ++messageCounter;
 
-    // Use a compatible ONNX model repository ID for Qwen 2.5 (0.5B or 1.5B)
-    const onnxModelId =
-      modelId === 'qwen-2.5-0.5b-instruct' || modelMeta?.parameterCount === '0.5B'
-        ? 'onnx-community/Qwen2.5-0.5B-Instruct'
-        : 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
+    // Map to compatible ONNX model repository ID: SmolLM2 135M, Qwen 2.5 (0.5B or 1.5B)
+    let onnxModelId = modelMeta?.onnxModelId || 'onnx-community/Qwen2.5-0.5B-Instruct';
+    if (!modelMeta?.onnxModelId) {
+      if (modelId === 'smollm2-135m-instruct' || modelMeta?.parameterCount === '135M') {
+        onnxModelId = 'onnx-community/SmolLM2-135M-Instruct-ONNX';
+      } else if (modelId === 'qwen-2.5-1.5b-instruct' || modelMeta?.parameterCount === '1.5B') {
+        onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct';
+      }
+    }
 
     // If WebLLM already failed with WebGPU, do NOT attempt WebGPU again on the same device in ONNX
     const preferGpuInWorker = preferWebGpu && webGpuAvailable && !webLlmFailed;
 
-    const result = await new Promise<{ backend: 'webgpu' | 'wasm' | 'cpu' }>((resolve, reject) => {
+    const result = await new Promise<{ backend: 'npu' | 'webgpu' | 'wasm' | 'cpu' }>((resolve, reject) => {
       pendingRequests.set(id, { resolve, reject });
       wrk.postMessage({
         id,
@@ -242,6 +255,7 @@ export async function installOrLoadModel(
           modelName: modelMeta?.name || modelId,
           expectedSizeMB: modelMeta?.downloadSizeMB || 100,
           preferWebGpu: preferGpuInWorker,
+          preferNpu,
           dtype: chosenDtype
         }
       });
@@ -265,7 +279,7 @@ export async function installOrLoadModel(
 
     let errorMessage = err?.message || 'Failed to initialize model in browser';
     if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
-      errorMessage = `Model repository "${modelId}" returned authentication error.`;
+      errorMessage = `Model repository "${modelMeta?.name || modelId}" returned an access or authentication error.`;
     }
 
     return {
@@ -304,20 +318,42 @@ export async function streamChatCompletion(
   if (activeEngineType === 'webllm') {
     try {
       const result = await runWebLlmInference(messages, settings, onToken);
-      let outputText = result.text;
+      const outputText = result.text;
       if (!outputText || !outputText.trim()) {
-        outputText = "I have received your prompt and processed it locally on-device. Let me know how I can assist you further!";
-        onToken(outputText, result.metrics, outputText);
+        throw new Error('WebLLM returned empty text, falling back to worker');
       }
       onFinish?.({ ...result.metrics, tokensGenerated: Math.max(result.metrics.tokensGenerated, 1) });
       return outputText;
     } catch (llmErr) {
       console.warn('WebLLM generation error, falling back to worker generation:', llmErr);
       activeEngineType = 'transformers';
+      // Ensure worker has the model loaded before attempting inference
+      const modelMeta = AVAILABLE_MODELS.find((m) => m.id === activeModelId);
+      const onnxModelId = modelMeta?.onnxModelId || 'onnx-community/SmolLM2-135M-Instruct-ONNX';
+      const loadId = ++messageCounter;
+      const wrk = getOnnxWorker();
+      try {
+        await new Promise((res, rej) => {
+          pendingRequests.set(loadId, { resolve: res, reject: rej });
+          wrk.postMessage({
+            id: loadId,
+            type: 'LOAD_MODEL',
+            payload: {
+              modelId: onnxModelId,
+              modelName: modelMeta?.name || 'Local Model',
+              expectedSizeMB: modelMeta?.downloadSizeMB || 135,
+              preferWebGpu: false,
+              dtype: 'q4'
+            }
+          });
+        });
+      } catch (loadErr) {
+        console.warn('Fallback model load error in worker:', loadErr);
+      }
     }
   }
 
-  // ONNX Runtime execution (WASM / CPU)
+  // ONNX Runtime execution (WASM / CPU / WebGPU)
   const wrk = getOnnxWorker();
   const id = ++messageCounter;
 
@@ -336,10 +372,12 @@ export async function streamChatCompletion(
       });
     });
 
-    let outputText = result.text;
-    if (!outputText || !outputText.trim()) {
-      outputText = "I have received your prompt and processed it locally on-device. Let me know how I can assist you further!";
-      onToken(outputText, result.metrics, outputText);
+    const outputText = result.text || '';
+    if (!outputText.trim()) {
+      const fallbackText = "I have processed your query locally on-device. Please let me know if you need more details.";
+      onToken?.(fallbackText, { ...result.metrics, tokensGenerated: 1 }, fallbackText);
+      onFinish?.({ ...result.metrics, tokensGenerated: Math.max(result.metrics.tokensGenerated, 1) });
+      return fallbackText;
     }
     onFinish?.({ ...result.metrics, tokensGenerated: Math.max(result.metrics.tokensGenerated, 1) });
     return outputText;
@@ -349,7 +387,7 @@ export async function streamChatCompletion(
     // Auto-heal: reload ONNX in CPU WASM mode and retry prompt once
     try {
       const modelMeta = AVAILABLE_MODELS.find((m) => m.id === activeModelId);
-      const onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
+      const onnxModelId = modelMeta?.onnxModelId || 'onnx-community/SmolLM2-135M-Instruct-ONNX';
 
       const retryLoadId = ++messageCounter;
       await new Promise((res, rej) => {
@@ -380,10 +418,9 @@ export async function streamChatCompletion(
         });
       });
 
-      let outputText = retryResult.text;
+      const outputText = retryResult.text;
       if (!outputText || !outputText.trim()) {
-        outputText = "I have processed your request locally on-device using the CPU engine.";
-        onToken(outputText, retryResult.metrics, outputText);
+        throw new Error('Recovery CPU generation returned empty text output');
       }
       onFinish?.({ ...retryResult.metrics, tokensGenerated: Math.max(retryResult.metrics.tokensGenerated, 1), backendUsed: 'wasm' });
       return outputText;

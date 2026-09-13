@@ -16,6 +16,7 @@ import {
 import { InferenceSettings, TelemetryPoint } from '../types';
 import { GenerationMetrics, ProgressCallbackData } from './onnxRunner';
 import { setWebGpuActiveInUse } from './webgpuStatus';
+import { initStartupWeightHeap, clearPersistentWeightHeap } from './weightMemoryHeap';
 
 let webLlmEngine: MLCEngineInterface | null = null;
 let activeWebLlmModelId: string | null = null;
@@ -40,10 +41,11 @@ export async function isModelInIndexedDB(modelId: string): Promise<boolean> {
 }
 
 /**
- * Remove model files and wasm binary from IndexedDB
+ * Remove model files and wasm binary from IndexedDB and persistent memory heap
  */
 export async function removeModelFromIndexedDB(modelId: string): Promise<void> {
   try {
+    clearPersistentWeightHeap(modelId);
     await deleteModelAllInfoInCache(modelId, indexedDbAppConfig);
   } catch (err) {
     console.warn('Error deleting model from IndexedDB:', err);
@@ -95,13 +97,15 @@ export async function isWebGpuSupported(): Promise<boolean> {
     try {
       const device = await adapter.requestDevice();
       if (device) {
+        if (typeof device.destroy === 'function') {
+          try { device.destroy(); } catch {}
+        }
         return true;
       }
+      return false;
     } catch {
-      return true;
+      return false;
     }
-
-    return true;
   } catch {
     return false;
   }
@@ -163,9 +167,16 @@ export async function loadWebLlmModel(
   onProgress?.({
     status: 'loading',
     modelId,
-    stage: 'Initializing hardware acceleration...',
+    stage: 'Initializing persistent WebGPU memory heap & hardware acceleration...',
     progress: 5
   });
+
+  // Store raw byte stream directly into a single persistent WebGPU array buffer / virtual memory heap at startup
+  try {
+    await initStartupWeightHeap(modelId);
+  } catch (heapErr) {
+    console.warn('Startup weight heap initialization notice:', heapErr);
+  }
 
   workerInstance = new Worker(new URL('./webllmWorker.ts', import.meta.url), {
     type: 'module'
@@ -289,6 +300,10 @@ export async function runWebLlmInference(
 
   for (const m of contextMessages) {
     if (m.role !== 'system' && m.content?.trim()) {
+      // Filter out stale dummy fallback messages from past runs
+      if (m.role === 'assistant' && m.content.includes('I have received your prompt and processed it locally on-device')) {
+        continue;
+      }
       chatMessages.push({
         role: m.role,
         content: m.content

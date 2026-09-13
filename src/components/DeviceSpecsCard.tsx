@@ -60,7 +60,7 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
             disabled={isLoading}
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full bg-[#18181b] text-white hover:bg-zinc-800 disabled:opacity-50 transition-all shadow-2xs min-h-[38px]"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className="w-3.5 h-3.5" />
             <span>{isLoading ? 'Scanning' : 'Re-run Diagnostic'}</span>
           </button>
         </div>
@@ -137,10 +137,10 @@ export const DeviceSpecsCard: React.FC<DeviceSpecsCardProps> = ({
             <Zap className="w-4 h-4 text-zinc-700" />
           </div>
           <div className="text-lg sm:text-xl font-extrabold font-display tracking-tight text-zinc-900">
-            {specs?.webGpuAvailable ? 'GPU Shaders' : 'CPU Core'}
+            {specs?.npuAvailable ? 'NPU Neural' : specs?.webGpuAvailable ? 'GPU Shaders' : 'CPU Core'}
           </div>
           <div className="text-[10px] sm:text-[11px] text-zinc-500 font-medium mt-0.5 truncate">
-            {specs?.webGpuAvailable ? 'Hardware Turbo' : 'Standard CPU'}
+            {specs?.npuAvailable ? (specs.npuName || 'WebNN Accelerator') : specs?.webGpuAvailable ? 'Hardware Turbo' : 'Standard CPU'}
           </div>
         </div>
 

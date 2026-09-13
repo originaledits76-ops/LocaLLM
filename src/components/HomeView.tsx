@@ -115,7 +115,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="flex items-center gap-2">
           {activeModel && (
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-zinc-200/80 text-xs font-medium text-zinc-700 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className="font-semibold text-zinc-900">{activeModel.name}</span>
             </div>
           )}
@@ -144,7 +144,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           Start New Chat
         </span>
         <div className="aidora-lime-btn w-10 h-10 flex items-center justify-center shrink-0">
-          <ArrowRight className="w-5 h-5 text-[#18181b] group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight className="w-5 h-5 text-[#18181b]" />
         </div>
       </button>
 
@@ -168,7 +168,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               key={idx}
               onClick={() => onStartNewChat(topic.prompt)}
-              className="px-4 py-2 rounded-full bg-white border border-zinc-200/80 hover:border-zinc-400 text-xs font-medium text-zinc-800 shrink-0 shadow-2xs transition-all hover:scale-[1.02] active:scale-98"
+              className="px-4 py-2 rounded-full bg-white border border-zinc-200/80 hover:border-zinc-400 text-xs font-medium text-zinc-800 shrink-0 shadow-2xs transition-colors"
             >
               {topic.label}
             </button>
@@ -200,7 +200,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {popularPrompts.map((item) => (
             <div
               key={item.id}
-              className={`p-5 rounded-[28px] flex flex-col justify-between min-h-[160px] relative overflow-hidden transition-all hover:-translate-y-1 ${
+              className={`p-5 rounded-[28px] flex flex-col justify-between min-h-[160px] relative overflow-hidden ${
                 item.color === 'lime'
                   ? 'aidora-card-lime'
                   : item.color === 'cyan'

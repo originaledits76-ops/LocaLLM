@@ -56,7 +56,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#edf9d5] text-zinc-900 border border-black/10">
-              Qwen 2.5 Family
+              Local SLM Catalog
             </span>
           </div>
         </div>
@@ -102,7 +102,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
           return (
             <div
               key={model.id}
-              className={`aidora-card-white p-6 space-y-5 transition-all ${
+              className={`aidora-card-white p-6 space-y-5 transition-colors ${
                 rec.isBestPick
                   ? 'ring-2 ring-[#c7f43a] shadow-md relative'
                   : 'hover:border-zinc-300'
@@ -119,7 +119,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                   )}
                   {isActive && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       <span>Active</span>
                     </span>
                   )}
@@ -182,7 +182,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                 <div className="space-y-2 p-4 rounded-2xl bg-zinc-50 border border-zinc-200">
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span className="flex items-center gap-1.5 text-zinc-800">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                      <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Downloading to IndexedDB...</span>
                     </span>
                     <span className="font-mono text-zinc-900">{runtime.progress}%</span>
@@ -247,7 +247,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                       <button
                         type="button"
                         onClick={() => onLaunchChat(model.id)}
-                        className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105"
+                        className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
                       >
                         <MessageSquare className="w-4 h-4 text-[#c7f43a]" />
                         <span>Start Chatting</span>
@@ -256,7 +256,7 @@ export const ModelCatalog: React.FC<ModelCatalogProps> = ({
                       <button
                         type="button"
                         onClick={() => onInstall(model.id)}
-                        className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105"
+                        className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
                       >
                         <Download className="w-4 h-4 text-[#c7f43a]" />
                         <span>Install to IndexedDB ({model.downloadSizeMB} MB)</span>

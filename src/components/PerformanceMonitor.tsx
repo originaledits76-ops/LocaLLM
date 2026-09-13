@@ -37,7 +37,7 @@ export interface PerformanceMonitorProps {
   telemetry: TelemetryPoint[];
   isGenerating: boolean;
   activeModelName?: string;
-  backendUsed?: 'webgpu' | 'wasm' | 'cpu';
+  backendUsed?: 'npu' | 'webgpu' | 'wasm' | 'cpu';
   ttftMs?: number;
   tokensGenerated?: number;
   tokensPerSec?: number;
@@ -71,6 +71,21 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   onClose
 }) => {
   const [viewMode, setChartViewMode] = useState<ChartViewMode>('combined');
+
+  // Downsample chart data to max 40 points to avoid high CPU/GPU load & heavy DOM allocations
+  const displayTelemetry = React.useMemo(() => {
+    if (telemetry.length <= 40) return telemetry;
+    const step = Math.ceil(telemetry.length / 40);
+    const sampled: TelemetryPoint[] = [];
+    for (let i = 0; i < telemetry.length; i += step) {
+      sampled.push(telemetry[i]);
+    }
+    const last = telemetry[telemetry.length - 1];
+    if (sampled[sampled.length - 1] !== last) {
+      sampled.push(last);
+    }
+    return sampled;
+  }, [telemetry]);
 
   // Compute stats from points if not explicitly passed
   const currentTokenCount = telemetry.length > 0 ? telemetry[telemetry.length - 1].tokenIndex : tokensGenerated;
@@ -133,7 +148,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   return (
     <div
       id="performance-monitor-panel"
-      className="w-full liquid-glass-card rounded-2xl border border-black/[0.08] shadow-sm overflow-hidden transition-all duration-200"
+      className="w-full liquid-glass-card rounded-2xl border border-black/[0.08] shadow-sm overflow-hidden"
     >
       {/* Top Header Bar */}
       <div className="px-3.5 sm:px-4 py-2.5 flex items-center justify-between gap-2 border-b border-black/[0.05] bg-black/[0.015]">
@@ -149,8 +164,8 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
               </h4>
 
               {isGenerating ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-semibold tracking-wide uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-semibold tracking-wide uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Live Stream
                 </span>
               ) : telemetry.length > 0 ? (
@@ -162,7 +177,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
             <p className="text-[10px] font-mono text-zinc-500 truncate">
               {activeModelName ? `${activeModelName} • ` : ''}
-              Mode: <span className="uppercase font-semibold text-black">{backendUsed === 'webgpu' ? 'GPU Hardware' : 'CPU Core'}</span>
+              Mode: <span className="uppercase font-semibold text-black">{backendUsed === 'npu' ? 'NPU Hardware' : backendUsed === 'webgpu' ? 'GPU Hardware' : 'CPU Core'}</span>
             </p>
           </div>
         </div>
@@ -366,7 +381,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
           {/* Chart Display Container */}
           {telemetry.length === 0 ? (
             <div className="h-44 sm:h-48 flex flex-col items-center justify-center text-center p-4 border border-dashed border-black/10 rounded-xl bg-white/40">
-              <Activity className="w-6 h-6 text-zinc-300 mb-1.5 animate-pulse" />
+              <Activity className="w-6 h-6 text-zinc-300 mb-1.5" />
               <p className="text-xs font-semibold text-black">Awaiting Inference Activity</p>
               <p className="text-[11px] text-zinc-500 max-w-xs mt-0.5 leading-relaxed">
                 Send a prompt to observe live tokens-per-second, prompt evaluation latency, and inter-token variation.
@@ -376,7 +391,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
             <div className="h-44 sm:h-52 w-full pt-1">
               {viewMode === 'combined' && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={telemetry} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                  <ComposedChart data={displayTelemetry} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
                     <defs>
                       <linearGradient id="tpsGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#18181b" stopOpacity={0.25} />
@@ -466,7 +481,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {viewMode === 'tps' && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={telemetry} margin={{ top: 8, right: 10, left: -16, bottom: 0 }}>
+                  <AreaChart data={displayTelemetry} margin={{ top: 8, right: 10, left: -16, bottom: 0 }}>
                     <defs>
                       <linearGradient id="tpsOnlyGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#000000" stopOpacity={0.25} />
@@ -529,7 +544,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {viewMode === 'latency' && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={telemetry} margin={{ top: 8, right: 10, left: -16, bottom: 0 }}>
+                  <BarChart data={displayTelemetry} margin={{ top: 8, right: 10, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
                     <XAxis
                       dataKey="tokenIndex"
@@ -567,7 +582,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
                       radius={[2, 2, 0, 0]}
                       isAnimationActive={false}
                     >
-                      {telemetry.map((entry, index) => (
+                      {displayTelemetry.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={entry.isSpike ? '#ef4444' : '#27272a'}

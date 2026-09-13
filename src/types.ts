@@ -11,6 +11,9 @@ export interface DeviceSpecs {
   cpuCores: number;
   webGpuAvailable: boolean;
   webGpuAdapterName: string | null;
+  npuAvailable: boolean;
+  npuName: string | null;
+  npuBackend: 'webnn' | 'directml' | 'hardware' | null;
   webGlRenderer: string | null;
   storageQuotaMB: number | null;
   storageUsageMB: number | null;
@@ -38,13 +41,15 @@ export interface ModelInfo {
   license: string;
   creator: string;
   recommendedTiers: DeviceTier[];
-  preferredBackend: 'webgpu' | 'wasm' | 'auto';
+  preferredBackend: 'npu' | 'webgpu' | 'wasm' | 'auto';
+  supportsNpu?: boolean;
   systemPromptDefault: string;
   samplePrompts: string[];
   bitPrecision?: '2-bit' | '3-bit' | '4-bit' | 'fp16';
   dtype: 'q2' | 'q3' | 'q4' | 'q4f16' | 'q0f16' | 'q8' | 'fp32';
   engineType?: EngineType;
   webLlmModelId?: string;
+  onnxModelId?: string;
 }
 
 export interface ModelRecommendation {
@@ -97,7 +102,7 @@ export interface ChatMessage {
     instantaneousTps?: number;
     timeToFirstTokenMs?: number;
     totalTimeMs?: number;
-    backendUsed?: 'webgpu' | 'wasm' | 'cpu';
+    backendUsed?: 'npu' | 'webgpu' | 'wasm' | 'cpu';
     peakTokensPerSec?: number;
     avgLatencyMs?: number;
     maxLatencyMs?: number;
@@ -114,6 +119,8 @@ export interface InferenceSettings {
   fastMode?: boolean;
   systemPrompt: string;
   preferWebGpu: boolean;
+  preferNpu?: boolean;
+  backendPreference?: 'auto' | 'npu' | 'webgpu' | 'wasm';
   quantizationPreference?: 'auto' | '2bit' | '3bit' | '4bit';
   engine?: 'auto' | 'webllm' | 'transformers';
 }

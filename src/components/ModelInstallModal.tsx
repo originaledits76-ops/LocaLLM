@@ -71,8 +71,8 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
   const isBestPick = activeRec?.isBestPick ?? (deviceRamGB ? (deviceRamGB <= 4 ? model.parameterCount === '0.5B' : model.parameterCount === '1.5B') : false);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-[28px] max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-zinc-200 space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-[28px] max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-zinc-200 space-y-5 max-h-[92vh] overflow-y-auto">
         {/* Header with Title and Close button */}
         <div className="flex items-start justify-between gap-3 pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
         {availableModels.length > 1 && onSelectModel && (
           <div className="space-y-1.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-              Select Qwen 2.5 Model Size
+              Select Model Architecture &amp; Size
             </span>
             <div className="grid grid-cols-2 gap-2">
               {availableModels.map((m) => {
@@ -258,7 +258,7 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
             <div className="space-y-2 p-4 rounded-2xl bg-zinc-50 border border-zinc-200">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-zinc-800 flex items-center gap-1.5">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                  <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Installing {model.name} to IndexedDB...</span>
                 </span>
                 <span className="font-mono text-zinc-900">{progress}%</span>
@@ -339,10 +339,10 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
                 type="button"
                 disabled={isDownloading}
                 onClick={() => onInstall(model.id)}
-                className={`flex-1 py-3.5 px-5 rounded-full font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all ${
+                className={`flex-1 py-3.5 px-5 rounded-full font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors ${
                   isDownloading
                     ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
-                    : 'bg-[#18181b] hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99]'
+                    : 'bg-[#18181b] hover:bg-zinc-800 text-white'
                 }`}
               >
                 <Download className="w-4 h-4" />
@@ -359,7 +359,7 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
                   onStartChat(model.id);
                   onClose();
                 }}
-                className="flex-1 py-3.5 px-5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="flex-1 py-3.5 px-5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
               >
                 <span>Start Chatting with {model.name}</span>
                 <ArrowRight className="w-4 h-4 text-[#c7f43a]" />

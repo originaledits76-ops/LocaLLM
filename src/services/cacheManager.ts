@@ -23,6 +23,7 @@ const ID_MIGRATIONS: Record<string, string> = {
   'onnx-community/SmolLM2-135M-Instruct': 'onnx-community/SmolLM2-135M-Instruct-ONNX',
   'onnx-community/SmolLM2-360M-Instruct': 'onnx-community/SmolLM2-360M-Instruct-ONNX',
   'onnx-community/Llama-3.2-1B-Instruct': 'onnx-community/Llama-3.2-1B-Instruct-ONNX',
+  'onnx-community/Qwen2.5-1.5B-Instruct-ONNX': 'onnx-community/Qwen2.5-1.5B-Instruct',
   'SmolLM2-135M-Instruct-q4f16_1-MLC': 'SmolLM2-135M-Instruct-q0f16-MLC',
 };
 
