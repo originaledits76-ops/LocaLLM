@@ -160,9 +160,9 @@ export default function App() {
 
       setRuntimeStates((prev) => ({ ...initialRuntimeStates, ...prev }));
 
-      // Set default active model to the best pick if not already selected
+      // Set default active model to the hardware-recommended best pick
       setActiveModelId((curr) => {
-        if (!curr && recs.length > 0) {
+        if (recs.length > 0) {
           const bestPick = recs.find((r) => r.isBestPick) || recs[0];
           setSettings((s) => {
             const updated = {
@@ -202,32 +202,40 @@ export default function App() {
       const cachedSpecs = await idbGetCachedSpecs();
       if (cachedSpecs) {
         setSpecs(cachedSpecs);
-        setRecommendations(evaluateModelRecommendations(cachedSpecs, AVAILABLE_MODELS));
+        const recs = evaluateModelRecommendations(cachedSpecs, AVAILABLE_MODELS);
+        setRecommendations(recs);
+        const bestPick = recs.find((r) => r.isBestPick) || recs[0];
+        if (bestPick) {
+          setActiveModelId(bestPick.model.id);
+        }
         setIsScanning(false);
       } else {
         performHardwareScan();
       }
 
-      // 4. Verify whether Qwen 2.5 1.5B is stored in IndexedDB
-      const targetModel = AVAILABLE_MODELS[0];
-      if (targetModel) {
-        const isInstalledInIdb = await verifyModelInIndexedDB(targetModel.id, targetModel.webLlmModelId);
+      // 4. Verify whether models are stored in IndexedDB
+      let anyInstalled = false;
+      for (const m of AVAILABLE_MODELS) {
+        const isInstalledInIdb = await verifyModelInIndexedDB(m.id, m.webLlmModelId);
         if (isInstalledInIdb) {
+          anyInstalled = true;
           setRuntimeStates((prev) => ({
             ...prev,
-            [targetModel.id]: {
+            [m.id]: {
               status: 'ready',
               progress: 100,
               statusMessage: 'Ready in IndexedDB',
-              downloadedBytes: targetModel.downloadSizeMB * 1024 * 1024,
-              totalBytes: targetModel.downloadSizeMB * 1024 * 1024,
+              downloadedBytes: m.downloadSizeMB * 1024 * 1024,
+              totalBytes: m.downloadSizeMB * 1024 * 1024,
               error: null
             }
           }));
-        } else {
-          // On app open: automatically prompt user to install the model with displaying its info!
-          setShowInstallModal(true);
         }
+      }
+
+      if (!anyInstalled) {
+        // On app open: automatically prompt user to install the model with displaying its info!
+        setShowInstallModal(true);
       }
     }
     loadIndexedDbState();
@@ -867,8 +875,14 @@ export default function App() {
       <ModelInstallModal
         isOpen={showInstallModal}
         onClose={() => setShowInstallModal(false)}
-        model={AVAILABLE_MODELS[0]}
-        runtimeState={runtimeStates[AVAILABLE_MODELS[0].id]}
+        model={activeModel || AVAILABLE_MODELS[0]}
+        availableModels={AVAILABLE_MODELS}
+        recommendations={recommendations}
+        deviceRamGB={specs?.ramGB}
+        onSelectModel={(modelId) => {
+          setActiveModelId(modelId);
+        }}
+        runtimeState={runtimeStates[activeModel?.id || AVAILABLE_MODELS[0].id]}
         onInstall={handleInstallModel}
         onCancelInstall={handleCancelInstall}
         onUninstall={handleUninstallModel}

@@ -127,7 +127,10 @@ export async function touchModelUsage(modelId: string): Promise<void> {
  */
 export async function verifyModelInIndexedDB(modelId: string, webLlmId?: string): Promise<boolean> {
   // 1. Check WebLLM's tvmjs IndexedDB store
-  const targetWebLlmId = webLlmId || (modelId.includes('-MLC') ? modelId : 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC');
+  const defaultWebLlm = modelId === 'qwen-2.5-0.5b-instruct'
+    ? 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC'
+    : 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC';
+  const targetWebLlmId = webLlmId || (modelId.includes('-MLC') ? modelId : defaultWebLlm);
   const inWebLlmIdb = await isModelInIndexedDB(targetWebLlmId);
   if (inWebLlmIdb) return true;
 
@@ -145,13 +148,16 @@ export async function uninstallModel(modelId: string): Promise<boolean> {
 
   // 2. Remove from WebLLM IndexedDB store
   await removeModelFromIndexedDB(modelId);
-  if (!modelId.includes('-MLC')) {
+  if (modelId === 'qwen-2.5-0.5b-instruct' || modelId.includes('0.5B')) {
+    await removeModelFromIndexedDB('Qwen2.5-0.5B-Instruct-q4f16_1-MLC');
+  } else {
     await removeModelFromIndexedDB('Qwen2.5-1.5B-Instruct-q4f16_1-MLC');
   }
 
   // 3. Remove from localStorage
   const records = getInstalledModelRecords();
   delete records[modelId];
+  delete records['Qwen2.5-0.5B-Instruct-q4f16_1-MLC'];
   delete records['Qwen2.5-1.5B-Instruct-q4f16_1-MLC'];
   try {
     localStorage.setItem(INSTALLED_MODELS_KEY, JSON.stringify(records));

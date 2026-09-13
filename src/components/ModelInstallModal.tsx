@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Download,
   Check,
@@ -20,13 +20,17 @@ import {
   RefreshCw,
   Trash2
 } from 'lucide-react';
-import { ModelInfo, ModelRuntimeState } from '../types';
+import { ModelInfo, ModelRuntimeState, ModelRecommendation } from '../types';
 import { WebGpuLiveStatus } from './WebGpuLiveStatus';
 
 interface ModelInstallModalProps {
   isOpen: boolean;
   onClose: () => void;
   model: ModelInfo;
+  availableModels?: ModelInfo[];
+  recommendations?: ModelRecommendation[];
+  deviceRamGB?: number;
+  onSelectModel?: (modelId: string) => void;
   runtimeState?: ModelRuntimeState;
   onInstall: (modelId: string) => void;
   onCancelInstall: (modelId: string) => void;
@@ -39,6 +43,10 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
   isOpen,
   onClose,
   model,
+  availableModels = [],
+  recommendations = [],
+  deviceRamGB,
+  onSelectModel,
   runtimeState,
   onInstall,
   onCancelInstall,
@@ -57,6 +65,10 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
   const downloadedMB = runtimeState?.downloadedBytes
     ? (runtimeState.downloadedBytes / (1024 * 1024)).toFixed(1)
     : (progress * (model.downloadSizeMB / 100)).toFixed(1);
+
+  // Find recommendation info for active model
+  const activeRec = recommendations.find((r) => r.model.id === model.id);
+  const isBestPick = activeRec?.isBestPick ?? (deviceRamGB ? (deviceRamGB <= 4 ? model.parameterCount === '0.5B' : model.parameterCount === '1.5B') : false);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
@@ -92,10 +104,70 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
           </button>
         </div>
 
+        {/* Model Selector Tabs (if multiple models available) */}
+        {availableModels.length > 1 && onSelectModel && (
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+              Select Qwen 2.5 Model Size
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {availableModels.map((m) => {
+                const isSelected = m.id === model.id;
+                const rec = recommendations.find((r) => r.model.id === m.id);
+                const recBest = rec?.isBestPick ?? (deviceRamGB ? (deviceRamGB <= 4 ? m.parameterCount === '0.5B' : m.parameterCount === '1.5B') : false);
+
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => onSelectModel(m.id)}
+                    className={`p-2.5 rounded-2xl border text-left transition-all relative ${
+                      isSelected
+                        ? 'bg-[#18181b] text-white border-zinc-900 shadow-sm'
+                        : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border-zinc-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-zinc-900'}`}>
+                        {m.parameterCount} Instruct
+                      </span>
+                      <span className={`text-[10px] font-mono ${isSelected ? 'text-[#c7f43a]' : 'text-zinc-500'}`}>
+                        ~{m.downloadSizeMB}MB
+                      </span>
+                    </div>
+                    {recBest && (
+                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#edf9d5] text-zinc-900">
+                        <Sparkles className="w-2.5 h-2.5 fill-current" />
+                        <span>Recommended {deviceRamGB ? `(${deviceRamGB}GB RAM)` : ''}</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Live WebGPU Status Notification inside Modal */}
-        <div className="pt-1">
+        <div className="pt-0.5">
           <WebGpuLiveStatus onOpenGuideModal={onOpenWebGpuGuide} />
         </div>
+
+        {/* RAM Recommendation Banner */}
+        {isBestPick && (
+          <div className="p-3 rounded-2xl bg-[#edf9d5] border border-black/10 flex items-center gap-2.5 text-xs text-zinc-900 font-medium">
+            <Sparkles className="w-4 h-4 text-emerald-700 shrink-0" />
+            <div>
+              <span className="font-bold">Recommended for Your Device: </span>
+              <span>
+                {activeRec?.reason ||
+                  (model.parameterCount === '0.5B'
+                    ? 'Ultra-lightweight footprint fits comfortably on 4GB RAM devices without memory pressure.'
+                    : 'Delivers full reasoning depth and richness with your available memory.')}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Comprehensive Model Details Grid */}
         <div className="space-y-3">
@@ -289,7 +361,7 @@ export const ModelInstallModal: React.FC<ModelInstallModalProps> = ({
                 }}
                 className="flex-1 py-3.5 px-5 rounded-full bg-[#18181b] hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
-                <span>Start Chatting with Qwen 2.5</span>
+                <span>Start Chatting with {model.name}</span>
                 <ArrowRight className="w-4 h-4 text-[#c7f43a]" />
               </button>
             )}

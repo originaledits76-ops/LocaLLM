@@ -206,12 +206,31 @@ export function evaluateModelRecommendations(
     let level: ModelRecommendation['level'] = 'comfortable';
     const reasons: string[] = [];
 
-    // RAM factor
+    // RAM factor & Hardware Matching
+    if (specs.ramGB <= 4) {
+      if (model.id === 'qwen-2.5-0.5b-instruct' || model.parameterCount === '0.5B') {
+        score += 40;
+        reasons.unshift(`Recommended for ${specs.ramGB}GB RAM: Ultra-compact footprint prevents browser tab out-of-memory pressure`);
+      } else {
+        score -= 15;
+        reasons.push(`Requires more memory than recommended for ${specs.ramGB}GB RAM systems`);
+      }
+    } else {
+      // Devices with >4GB RAM (e.g. 6GB, 8GB, 16GB+)
+      if (model.id === 'qwen-2.5-1.5b-instruct' || model.parameterCount === '1.5B') {
+        score += 40;
+        reasons.unshift(`Recommended for ${specs.ramGB}GB RAM: Higher reasoning capability with abundant memory headroom`);
+      } else {
+        score += 15;
+        reasons.push(`Lightweight and fast, though 1.5B offers richer intelligence on your ${specs.ramGB}GB RAM device`);
+      }
+    }
+
     if (specs.ramGB >= model.recommendedRamGB) {
-      score += 25;
+      score += 15;
       reasons.push(`${specs.ramGB}GB RAM exceeds recommendation (${model.recommendedRamGB}GB)`);
     } else if (specs.ramGB >= model.minRamGB) {
-      score += 10;
+      score += 5;
       reasons.push(`Meets minimum ${model.minRamGB}GB RAM requirement`);
     } else {
       score -= 30;

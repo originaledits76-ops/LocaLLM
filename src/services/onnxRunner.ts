@@ -223,8 +223,11 @@ export async function installOrLoadModel(
     const wrk = getOnnxWorker();
     const id = ++messageCounter;
 
-    // Use a compatible ONNX model repository ID for Qwen 2.5 1.5B
-    const onnxModelId = 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
+    // Use a compatible ONNX model repository ID for Qwen 2.5 (0.5B or 1.5B)
+    const onnxModelId =
+      modelId === 'qwen-2.5-0.5b-instruct' || modelMeta?.parameterCount === '0.5B'
+        ? 'onnx-community/Qwen2.5-0.5B-Instruct'
+        : 'onnx-community/Qwen2.5-1.5B-Instruct-ONNX';
 
     // If WebLLM already failed with WebGPU, do NOT attempt WebGPU again on the same device in ONNX
     const preferGpuInWorker = preferWebGpu && webGpuAvailable && !webLlmFailed;
